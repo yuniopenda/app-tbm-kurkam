@@ -1,0 +1,44 @@
+# ============================================
+# KREDENSIAL & ENVIRONMENT
+# ============================================
+.env
+*.env
+
+# ============================================
+# DEPENDENSI (jika menggunakan Composer)
+# ============================================
+/vendor/
+composer.lock
+
+# ============================================
+# LOG & CACHE
+# ============================================
+*.log
+/logs/
+/cache/
+/tmp/
+
+# ============================================
+# FILE EDITOR & OS
+# ============================================
+# Windows
+Thumbs.db
+desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains (PHPStorm)
+.idea/
+*.iml
+
+# ============================================
+# FILE SENSITIF LAINNYA
+# ============================================
+/config/database.php
