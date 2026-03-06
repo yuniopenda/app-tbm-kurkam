@@ -3,20 +3,51 @@ session_start();
 include __DIR__ . '/config/koneksi.php';
 
 if (isset($_POST['login'])) {
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = $_POST['password'];
+    $username_input = trim($_POST['username']);
+    $password_input = $_POST['password'];
 
-    $result = mysqli_query($conn, "SELECT * FROM m_users WHERE username = '$username'");
-    
+    // -- 1. Cek admin / petugas dari tabel m_users
+    $username = mysqli_real_escape_string($conn, $username_input);
+    $result   = mysqli_query($conn, "SELECT * FROM m_users WHERE username = '$username'");
+
     if (mysqli_num_rows($result) === 1) {
         $row = mysqli_fetch_assoc($result);
-        if (password_verify($password, $row['password'])) {
+        if (password_verify($password_input, $row['password'])) {
             $_SESSION['login'] = true;
-            $_SESSION['user'] = $row['nama_lengkap'];
+            $_SESSION['user']  = $row['nama_lengkap'];
+            $_SESSION['role']  = $row['role'] ?? 'admin';
             header("Location: index.php");
             exit;
         }
     }
+
+    // -- 2. Cek anggota dari tabel m_anggota
+    $kode           = mysqli_real_escape_string($conn, $username_input);
+    $result_anggota = mysqli_query($conn, "SELECT * FROM m_anggota WHERE kode_anggota = '$kode'");
+
+    if (mysqli_num_rows($result_anggota) === 1) {
+        $anggota = mysqli_fetch_assoc($result_anggota);
+
+        // Default password = kode_anggota jika belum di-set
+        $valid = false;
+        if (empty($anggota['password'])) {
+            $valid = ($password_input === $anggota['kode_anggota']);
+        } else {
+            $valid = password_verify($password_input, $anggota['password']);
+        }
+
+        if ($valid) {
+            $_SESSION['login']        = true;
+            $_SESSION['user']         = $anggota['nama_lengkap'];
+            $_SESSION['role']         = 'anggota';
+            $_SESSION['id_anggota']   = $anggota['id'];
+            $_SESSION['kode_anggota'] = $anggota['kode_anggota'];
+            $_SESSION['usia_anggota'] = $anggota['kategori_usia'] ?? 'semua';
+            header("Location: pages/user/katalog.php");
+            exit;
+        }
+    }
+
     $error = true;
 }
 ?>

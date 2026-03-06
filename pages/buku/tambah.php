@@ -1,142 +1,210 @@
 <?php
 session_start();
-if (!isset($_SESSION['login'])) {
-    header("Location: /app-tbm-kurkam/login.php");
-    exit;
-}
+if (!isset($_SESSION['login'])) { header("Location: /app-tbm-kurkam/login.php"); exit; }
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'anggota') { header("Location: /app-tbm-kurkam/pages/user/katalog.php"); exit; }
 include(__DIR__ . '/../../config/koneksi.php');
 
-// --- 1. LOGIKA GENERATE KODE BUKU OTOMATIS ---
-$query_kode = mysqli_query($conn, "SELECT max(kode_buku) as kodeTerbesar FROM m_buku");
-$data_kode = mysqli_fetch_array($query_kode);
-$kodeBuku = $data_kode['kodeTerbesar'];
-
-// Mengambil angka dari kode buku (misal BK001 diambil 001)
-$urutan = (int) substr($kodeBuku, 2, 3);
-$urutan++;
-
-// Membentuk kode baru: BK001, BK002, dst.
-$huruf = "BK";
-$kodeOtomatis = $huruf . sprintf("%03s", $urutan);
-
-// --- 2. LOGIKA PROSES SIMPAN (Jika tombol diklik) ---
+// Proses simpan buku baru
 if (isset($_POST['simpan'])) {
-    $kode_buku = $_POST['kode_buku'];
-    $judul     = mysqli_real_escape_string($conn, $_POST['judul']);
-    $penulis   = mysqli_real_escape_string($conn, $_POST['penulis']);
-    $penerbit  = mysqli_real_escape_string($conn, $_POST['penerbit']);
-    $kategori  = $_POST['kategori'];
-    $stok      = $_POST['stok'];
+    $kode_buku   = mysqli_real_escape_string($conn, $_POST['kode_buku']);
+    $judul       = mysqli_real_escape_string($conn, $_POST['judul']);
+    $penulis     = mysqli_real_escape_string($conn, $_POST['penulis']);
+    $penerbit    = mysqli_real_escape_string($conn, $_POST['penerbit']);
+    $kategori    = mysqli_real_escape_string($conn, $_POST['kategori']);   // jenis topik: pertanian, dll
+    $jenis_buku  = $_POST['jenis_buku'];
+    $link_ebook  = mysqli_real_escape_string($conn, $_POST['link_ebook'] ?? '');
+    $kat_usia    = $_POST['kategori_usia'];
+    $stok        = (int)$_POST['stok'];
 
-    $query_simpan = "INSERT INTO m_buku (kode_buku, judul, penulis, penerbit, kategori, stok) 
-                     VALUES ('$kode_buku', '$judul', '$penulis', '$penerbit', '$kategori', '$stok')";
-
-    if (mysqli_query($conn, $query_simpan)) {
+    $q = "INSERT INTO m_buku (kode_buku, judul, penulis, penerbit, kategori, jenis_buku, link_ebook, kategori_usia, stok)
+          VALUES ('$kode_buku','$judul','$penulis','$penerbit','$kategori','$jenis_buku','$link_ebook','$kat_usia','$stok')";
+    if (mysqli_query($conn, $q)) {
         $_SESSION['sukses_tambah'] = true;
-        header("Location: daftar.php");
-        exit;
+        header("Location: daftar.php"); exit;
+    } else {
+        $error_db = mysqli_error($conn);
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Tambah Buku Baru - PinjamBuku</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tambah Buku - TBM Kurung Kambing</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-slate-100 font-sans flex min-h-screen">
+<?php include(__DIR__ . '/../../includes/sidebar.php'); ?>
 
-    <?php include(__DIR__ . '/../../includes/sidebar.php'); ?>
+<main class="flex-grow lg:ml-64 p-4 lg:p-8 pt-16 lg:pt-8 flex items-start justify-center">
+    <div class="max-w-3xl w-full">
+        <a href="daftar.php" class="inline-flex items-center text-slate-500 font-bold mb-6 hover:text-indigo-600 transition gap-2">
+            <i class="fas fa-arrow-left text-sm"></i> Kembali ke Katalog
+        </a>
+        <div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden">
+            <div class="bg-indigo-600 p-6 lg:p-10 text-white flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl lg:text-3xl font-black uppercase">Tambah Buku</h2>
+                    <p class="text-indigo-200 text-sm mt-1">Masukkan informasi lengkap buku koleksi perpustakaan.</p>
+                </div>
+                <div class="bg-white/10 p-5 rounded-3xl"><i class="fas fa-book-medical text-4xl"></i></div>
+            </div>
+            <form action="" method="POST" class="p-6 lg:p-10 space-y-5 lg:space-y-6" id="formTambahBuku" novalidate>
 
-    <main class="flex-grow ml-64 p-8 flex items-center justify-center">
-        <div class="max-w-3xl w-full">
-            
-            <a href="daftar.php" class="inline-flex items-center text-slate-500 font-bold mb-6 hover:text-indigo-600 transition gap-2 text-lg">
-                <i class="fas fa-arrow-left text-sm"></i> Kembali ke Katalog
-            </a>
+                <?php if(isset($error_db)): ?>
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl text-red-700 text-sm font-bold">
+                    <i class="fas fa-exclamation-circle mr-2"></i><?= $error_db ?>
+                </div>
+                <?php endif; ?>
 
-            <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 overflow-hidden border border-slate-50">
-                <div class="bg-indigo-600 p-10 text-white flex items-center justify-between">
+                <!-- Row 1: Kode Buku + Jenis Buku -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
                     <div>
-                        <h2 class="text-3xl font-black uppercase tracking-tighter">Tambah Buku</h2>
-                        <p class="text-indigo-100 text-lg mt-1 opacity-80">Masukkan informasi buku baru ke sistem.</p>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Kode Buku (dari perpustakaan) <span class="text-red-500">*</span></label>
+                        <input type="text" name="kode_buku" id="kode_buku" placeholder="Contoh: BK-001"
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
-                    <div class="bg-white/10 p-6 rounded-3xl backdrop-blur-md">
-                        <i class="fas fa-book-medical text-4xl"></i>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Jenis Buku <span class="text-red-500">*</span></label>
+                        <select name="jenis_buku" id="jenis_buku" onchange="toggleEbook(this.value)"
+                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                            <option value="fisik">📖 Buku Fisik</option>
+                            <option value="digital">💻 Digital (eBook)</option>
+                        </select>
                     </div>
                 </div>
 
-                <form action="" method="POST" class="p-10 space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        <div class="col-span-1">
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Kode Buku (Sistem)</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-5 flex items-center text-indigo-500">
-                                    <i class="fas fa-magic"></i>
-                                </span>
-                                <input type="text" name="kode_buku" value="<?= $kodeOtomatis; ?>" readonly
-                                       class="w-full pl-14 pr-6 py-4 bg-indigo-50 border-2 border-indigo-100 rounded-2xl outline-none font-black text-indigo-600 cursor-not-allowed text-lg">
-                            </div>
-                        </div>
+                <!-- Link eBook (muncul jika digital) -->
+                <div id="row_ebook" class="hidden">
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Link eBook (URL Langsung) <span class="text-red-500">*</span></label>
+                    <input type="url" name="link_ebook" placeholder="https://drive.google.com/..." id="link_ebook"
+                           class="w-full px-5 py-4 bg-blue-50 border-2 border-blue-100 rounded-2xl outline-none focus:border-blue-300 font-bold text-slate-700">
+                    <p class="text-xs text-slate-400 mt-1 ml-1">Masukkan link langsung ke file PDF / Google Drive / dll.</p>
+                </div>
 
-                        <div class="col-span-1">
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Kategori</label>
-                            <select name="kategori" class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700">
-                                <option value="Umum">Umum</option>
-                                <option value="Sains">Sains</option>
-                                <option value="Fiksi">Fiksi</option>
-                                <option value="Sejarah">Sejarah</option>
-                                <option value="Teknologi">Teknologi</option>
-                                <option value="Sastra">Sastra</option>
-                                <option value="Self Improvement">Self Improvement</option>
-                            </select>
-                        </div>
+                <!-- Row 2: Judul -->
+                <div>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Judul Buku <span class="text-red-500">*</span></label>
+                    <input type="text" name="judul" id="judul" placeholder="Judul lengkap buku..."
+                           class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700 text-lg">
+                </div>
 
-                        <div class="col-span-2">
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Judul Lengkap Buku</label>
-                            <input type="text" name="judul" placeholder="Contoh: Belajar PHP Dasar" required
-                                   class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700 text-lg">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Penulis / Pengarang</label>
-                            <input type="text" name="penulis" placeholder="Nama penulis..." required
-                                   class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Penerbit</label>
-                            <input type="text" name="penerbit" placeholder="Nama penerbit..." required
-                                   class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Jumlah Stok</label>
-                            <input type="number" name="stok" value="1" min="1" required
-                                   class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700 text-xl">
-                        </div>
+                <!-- Row 3: Penulis + Penerbit -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Penulis / Pengarang <span class="text-red-500">*</span></label>
+                        <input type="text" name="penulis" id="penulis" placeholder="Nama penulis..."
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
-
-                   <div class="pt-8 border-t border-slate-50 flex items-center justify-end gap-4">
-                        <a href="daftar.php" 
-                           class="px-8 py-5 rounded-2xl font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2">
-                            Batal
-                        </a>
-                        <button type="submit" name="simpan" 
-                                class="flex-[1] bg-indigo-600 text-white px-10 py-5 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all transform active:scale-95 flex items-center justify-center gap-3">
-                            <i class="fas fa-check-circle text-lg"></i>
-                            Simpan
-                        </button>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Penerbit <span class="text-red-500">*</span></label>
+                        <input type="text" name="penerbit" id="penerbit" placeholder="Nama penerbit..."
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
-                </form>
-            </div>
+                </div>
+
+                <!-- Row 4: Kategori Usia + Jenis Topik + Stok -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Untuk Usia</label>
+                        <select name="kategori_usia" class="w-full px-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                            <option value="semua">👥 Semua Usia</option>
+                            <option value="dewasa">🧑 Dewasa (19+)</option>
+                            <option value="remaja">👦 Remaja (13-18)</option>
+                            <option value="anak-anak">👶 Anak-anak (5-12)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Jenis / Topik Buku</label>
+                        <select name="kategori" class="w-full px-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                            <option value="">-- Pilih Topik --</option>
+                            <option>Pertanian</option>
+                            <option>Peternakan</option>
+                            <option>Agama & Religi</option>
+                            <option>Kesehatan</option>
+                            <option>Pendidikan</option>
+                            <option>Ekonomi</option>
+                            <option>Teknologi</option>
+                            <option>Sastra & Fiksi</option>
+                            <option>Sejarah</option>
+                            <option>Sains</option>
+                            <option>Seni & Budaya</option>
+                            <option>Umum</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Jumlah Stok <span class="text-red-500">*</span></label>
+                        <input type="number" name="stok" id="stok" value="1" min="0"
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700 text-xl">
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-50 flex flex-col sm:flex-row gap-3">
+                    <a href="daftar.php" class="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 transition text-center">Batal</a>
+                    <button type="submit" name="simpan"
+                            class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fas fa-save"></i> Simpan Buku
+                    </button>
+                </div>
+            </form>
         </div>
-    </main>
+    </div>
+</main>
+<script>
+function toggleEbook(val) {
+    const row = document.getElementById('row_ebook');
+    const link = document.getElementById('link_ebook');
+    row.classList.toggle('hidden', val !== 'digital');
+}
 
+document.getElementById('formTambahBuku').addEventListener('submit', function(e) {
+    const isDigital = document.getElementById('jenis_buku').value === 'digital';
+
+    const fields = [
+        { id: 'kode_buku',  label: 'Kode Buku' },
+        { id: 'judul',      label: 'Judul Buku' },
+        { id: 'penulis',    label: 'Penulis / Pengarang' },
+        { id: 'penerbit',   label: 'Penerbit' },
+        { id: 'stok',       label: 'Jumlah Stok' },
+    ];
+
+    if (isDigital) {
+        fields.push({ id: 'link_ebook', label: 'Link eBook' });
+    }
+
+    const kosong = fields.filter(f => {
+        const el = document.getElementById(f.id);
+        return !el || el.value.trim() === '' || (f.id === 'stok' && el.value === '');
+    });
+
+    if (kosong.length > 0) {
+        e.preventDefault();
+        const listHTML = kosong.map(f =>
+            `<li style="text-align:left;"><i class="fas fa-circle-xmark" style="color:#ef4444;margin-right:6px;"></i>${f.label}</li>`
+        ).join('');
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'Data Belum Lengkap!',
+            html: `<p style="margin-bottom:10px;color:#64748b;">Mohon lengkapi field berikut:</p><ul style="list-style:none;padding:0;">${listHTML}</ul>`,
+            confirmButtonText: 'OK, Saya Lengkapi',
+            confirmButtonColor: '#4f46e5',
+            customClass: { popup: 'rounded-3xl' }
+        }).then(() => {
+            // Fokus ke field pertama yang kosong
+            const firstEl = document.getElementById(kosong[0].id);
+            if (firstEl) { firstEl.focus(); firstEl.classList.add('border-red-400'); }
+        });
+    }
+});
+
+// Hapus highlight merah saat user mulai mengetik
+document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', () => el.classList.remove('border-red-400'));
+});
+</script>
 </body>
 </html>

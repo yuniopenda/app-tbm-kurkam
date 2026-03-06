@@ -1,135 +1,151 @@
 <?php
 session_start();
-if (!isset($_SESSION['login'])) {
-    header("Location: /app-tbm-kurkam/login.php");
-    exit;
-}
+if (!isset($_SESSION['login'])) { header("Location: /app-tbm-kurkam/login.php"); exit; }
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'anggota') { header("Location: /app-tbm-kurkam/pages/user/katalog.php"); exit; }
 include(__DIR__ . '/../../config/koneksi.php');
 
-// 1. AMBIL DATA LAMA BERDASARKAN ID
-if (!isset($_GET['id'])) {
-    header("Location: daftar.php");
-    exit;
-}
+if (!isset($_GET['id'])) { header("Location: daftar.php"); exit; }
+$id  = (int)$_GET['id'];
+$row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM m_anggota WHERE id = '$id'"));
+if (!$row) { echo "<script>alert('Data tidak ditemukan!'); window.location='daftar.php';</script>"; exit; }
 
-$id = $_GET['id'];
-$result = mysqli_query($conn, "SELECT * FROM m_anggota WHERE id = '$id'");
-$data = mysqli_fetch_assoc($result);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nama          = mysqli_real_escape_string($conn, $_POST['nama_lengkap']);
+    $jenis_kelamin = $_POST['jenis_kelamin'];
+    $tanggal_lahir = $_POST['tanggal_lahir'];
+    $nik           = mysqli_real_escape_string($conn, $_POST['nik'] ?? '');
+    $kategori_usia = $_POST['kategori_usia'];
+    $telepon       = mysqli_real_escape_string($conn, $_POST['telepon']);
+    $alamat        = mysqli_real_escape_string($conn, $_POST['alamat']);
 
-// Jika data tidak ditemukan
-if (mysqli_num_rows($result) < 1) {
-    echo "<script>alert('Data tidak ditemukan!'); window.location='daftar.php';</script>";
-    exit;
-}
+    mysqli_query($conn, "UPDATE m_anggota SET 
+        nama_lengkap='$nama', jenis_kelamin='$jenis_kelamin', tanggal_lahir='$tanggal_lahir',
+        nik='$nik', kategori_usia='$kategori_usia', telepon='$telepon', alamat='$alamat',
+        updated_by='{$_SESSION['user']}', updated_at=NOW()
+        WHERE id='$id'");
 
-// 2. LOGIKA UPDATE DATA
-if (isset($_POST['ubah'])) {
-    $nama_lengkap   = mysqli_real_escape_string($conn, $_POST['nama_lengkap']);
-    $jenis_kelamin  = $_POST['jenis_kelamin'];
-    $telepon        = mysqli_real_escape_string($conn, $_POST['telepon']);
-    $alamat         = mysqli_real_escape_string($conn, $_POST['alamat']);
-    $tanggal_daftar = $_POST['tanggal_daftar'];
-    
-    // Identitas pengubah dari session
-    $updated_by = $_SESSION['user'] ?? 'Admin';
-
-    try {
-        $query = "UPDATE m_anggota SET 
-                    nama_lengkap = '$nama_lengkap',
-                    jenis_kelamin = '$jenis_kelamin',
-                    telepon = '$telepon',
-                    alamat = '$alamat',
-                    tanggal_daftar = '$tanggal_daftar',
-                    updated_by = '$updated_by',
-                    updated_at = NOW()
-                  WHERE id = '$id'";
-        
-        if (mysqli_query($conn, $query)) {
-            echo "<script>alert('Data Anggota Berhasil Diperbarui!'); window.location='daftar.php';</script>";
-        }
-    } catch (mysqli_sql_exception $e) {
-        $pesan_error = $e->getMessage();
-        echo "<script>alert('Gagal Ubah: $pesan_error'); window.history.back();</script>";
-    }
+    $_SESSION['sukses_edit_anggota'] = true;
+    header("Location: daftar.php"); exit;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Ubah Anggota - LibraTech</title>
+    <title>Edit Anggota - TBM Kurung Kambing</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body class="bg-gray-100 font-sans flex min-h-screen">
+<body class="bg-slate-100 font-sans flex min-h-screen">
+<?php include(__DIR__ . '/../../includes/sidebar.php'); ?>
 
-    <?php include(__DIR__ . '/../../includes/sidebar.php'); ?>
-
-    <main class="flex-grow ml-64 p-8 flex items-center justify-center">
-        <div class="max-w-2xl w-full">
-            <a href="daftar.php" class="inline-flex items-center text-indigo-600 font-bold mb-6 hover:text-indigo-800 transition">
-                <i class="fas fa-arrow-left mr-2"></i> Kembali
-            </a>
-
-            <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
-                <div class="bg-amber-500 p-8 text-white flex items-center justify-between">
+<main class="flex-grow ml-64 p-8 flex items-start justify-center pt-12">
+    <div class="max-w-3xl w-full">
+        <a href="daftar.php" class="inline-flex items-center text-slate-500 font-bold mb-6 hover:text-indigo-600 transition gap-2">
+            <i class="fas fa-arrow-left text-sm"></i> Kembali
+        </a>
+        <div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden">
+            <div class="bg-indigo-600 p-10 text-white flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-black uppercase">Edit Anggota</h2>
+                    <p class="text-indigo-200 text-sm mt-1">Kode: <strong><?= $row['kode_anggota'] ?></strong></p>
+                </div>
+                <div class="bg-white/10 p-5 rounded-3xl"><i class="fas fa-user-edit text-4xl"></i></div>
+            </div>
+            <form id="editForm" action="" method="POST" class="p-10 space-y-6" novalidate>
+                <div class="grid grid-cols-2 gap-6">
                     <div>
-                        <h2 class="text-2xl font-bold uppercase tracking-wider">Edit Anggota</h2>
-                        <p class="text-amber-100 text-sm opacity-80">Mengubah data: <?= $data['kode_anggota']; ?></p>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Kode Anggota</label>
+                        <input type="text" value="<?= $row['kode_anggota'] ?>" readonly
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-400 cursor-not-allowed">
                     </div>
-                    <div class="bg-white/20 p-4 rounded-2xl">
-                        <i class="fas fa-user-edit text-3xl"></i>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Kategori Usia <span class="text-red-500">*</span></label>
+                        <select name="kategori_usia" class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                            <option value="dewasa"    <?= $row['kategori_usia']=='dewasa'?'selected':'' ?>>🧑 Dewasa (19+)</option>
+                            <option value="remaja"    <?= $row['kategori_usia']=='remaja'?'selected':'' ?>>👦 Remaja (13-18)</option>
+                            <option value="anak-anak" <?= $row['kategori_usia']=='anak-anak'?'selected':'' ?>>👶 Anak-anak (5-12)</option>
+                        </select>
                     </div>
                 </div>
-
-                <form action="" method="POST" class="p-10 space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest">Kode Anggota</label>
-                            <input type="text" value="<?= $data['kode_anggota']; ?>" readonly
-                                class="pl-6 pr-4 py-4 w-full bg-gray-100 border-2 border-gray-100 rounded-2xl outline-none font-bold text-gray-500">
-                        </div>
-
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest">Jenis Kelamin</label>
-                            <select name="jenis_kelamin" required class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-amber-500 transition">
-                                <option value="Laki-laki" <?= ($data['jenis_kelamin'] == 'Laki-laki') ? 'selected' : ''; ?>>Laki-laki</option>
-                                <option value="Perempuan" <?= ($data['jenis_kelamin'] == 'Perempuan') ? 'selected' : ''; ?>>Perempuan</option>
-                            </select>
-                        </div>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Nama Lengkap <span class="text-red-500">*</span></label>
+                        <input type="text" name="nama_lengkap" id="nama_lengkap" value="<?= htmlspecialchars($row['nama_lengkap']) ?>"
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
-
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-widest">Nama Lengkap</label>
-                        <input type="text" name="nama_lengkap" value="<?= $data['nama_lengkap']; ?>" required class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-amber-500 transition">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Jenis Kelamin</label>
+                        <select name="jenis_kelamin" class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                            <option value="Laki-laki"  <?= $row['jenis_kelamin']=='Laki-laki'?'selected':'' ?>>Laki-laki</option>
+                            <option value="Perempuan"  <?= $row['jenis_kelamin']=='Perempuan'?'selected':'' ?>>Perempuan</option>
+                        </select>
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest">Nomor HP</label>
-                            <input type="text" name="telepon" value="<?= $data['telepon']; ?>" required class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-amber-500 transition">
-                        </div>
-
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest">Tanggal Daftar</label>
-                            <input type="date" name="tanggal_daftar" value="<?= $data['tanggal_daftar']; ?>" required class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-amber-500 transition">
-                        </div>
+                </div>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Tanggal Lahir</label>
+                        <input type="date" name="tanggal_lahir" value="<?= $row['tanggal_lahir'] != '0000-00-00' ? $row['tanggal_lahir'] : '' ?>"
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
-
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-widest">Alamat</label>
-                        <input type="text" name="alamat" value="<?= $data['alamat']; ?>" required class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-amber-500 transition">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">NIK <span class="text-slate-300 font-normal">(opsional)</span></label>
+                        <input type="text" name="nik" value="<?= htmlspecialchars($row['nik'] ?? '') ?>" maxlength="20"
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
-
-                    <div class="pt-4 flex gap-4">
-                        <button type="submit" name="ubah" class="flex-[2] bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-2xl shadow-lg transition transform active:scale-95">
-                            Simpan Perubahan
-                        </button>
+                </div>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">No. Telepon</label>
+                        <input type="text" name="telepon" value="<?= htmlspecialchars($row['telepon']) ?>"
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
-                </form>
-            </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Alamat Lengkap</label>
+                        <input type="text" name="alamat" value="<?= htmlspecialchars($row['alamat'] ?? '') ?>"
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                    </div>
+                </div>
+                <div class="pt-6 border-t border-slate-50 flex gap-4">
+                    <a href="daftar.php" class="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 transition">Batal</a>
+                    <button type="button" onclick="konfirmasi()"
+                            class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fas fa-save"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </form>
         </div>
-    </main>
+    </div>
+</main>
+<script>
+function konfirmasi() {
+    // Validasi field wajib sebelum konfirmasi
+    const nama = document.getElementById('nama_lengkap');
+    if (!nama || nama.value.trim() === '') {
+        nama.classList.add('border-red-400');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Data Belum Lengkap!',
+            html: '<p style="color:#64748b;">Mohon lengkapi field berikut:</p><ul style="list-style:none;padding:0;"><li style="text-align:left;"><i class="fas fa-circle-xmark" style="color:#ef4444;margin-right:6px;"></i>Nama Lengkap</li></ul>',
+            confirmButtonText: 'OK, Saya Lengkapi',
+            confirmButtonColor: '#4f46e5',
+            customClass: { popup: 'rounded-3xl' }
+        }).then(() => nama.focus());
+        return;
+    }
+
+    Swal.fire({ title: 'Simpan perubahan?', icon: 'question', showCancelButton: true,
+        confirmButtonColor: '#4f46e5', cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Simpan!', cancelButtonText: 'Batal',
+        customClass: { popup: 'rounded-[2rem]' }
+    }).then(r => { if (r.isConfirmed) document.getElementById('editForm').submit(); });
+}
+
+// Hapus highlight merah saat user mulai mengetik
+document.querySelectorAll('input').forEach(el => {
+    el.addEventListener('input', () => el.classList.remove('border-red-400'));
+});
+</script>
 </body>
 </html>
