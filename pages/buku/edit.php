@@ -24,18 +24,19 @@ if (!$buku) {
 
 // 2. Logika Update Data (Proses ketika form disubmit)
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $judul      = mysqli_real_escape_string($conn, $_POST['judul']);
-    $penulis    = mysqli_real_escape_string($conn, $_POST['penulis']);
-    $penerbit   = mysqli_real_escape_string($conn, $_POST['penerbit']);
-    $kategori   = $_POST['kategori'];
-    $stok       = $_POST['stok'];
+    $judul       = mysqli_real_escape_string($conn, $_POST['judul']);
+    $penulis     = mysqli_real_escape_string($conn, $_POST['penulis']);
+    $penerbit    = mysqli_real_escape_string($conn, $_POST['penerbit']);
+    $kategori    = mysqli_real_escape_string($conn, $_POST['kategori']);
+    $jenis_buku  = $_POST['jenis_buku'];
+    $link_ebook  = mysqli_real_escape_string($conn, $_POST['link_ebook'] ?? '');
+    $kat_usia    = $_POST['kategori_usia'];
+    $stok        = (int)$_POST['stok'];
 
     $update_query = "UPDATE m_buku SET 
-                    judul = '$judul', 
-                    penulis = '$penulis', 
-                    penerbit = '$penerbit', 
-                    kategori = '$kategori', 
-                    stok = '$stok' 
+                    judul = '$judul', penulis = '$penulis', penerbit = '$penerbit', 
+                    kategori = '$kategori', jenis_buku = '$jenis_buku', 
+                    link_ebook = '$link_ebook', kategori_usia = '$kat_usia', stok = '$stok' 
                     WHERE id = '$id'";
 
     if (mysqli_query($conn, $update_query)) {
@@ -52,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Koleksi - PinjamBuku</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -61,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <?php include(__DIR__ . '/../../includes/sidebar.php'); ?>
 
-    <main class="flex-grow ml-64 p-8 flex items-center justify-center">
+    <main class="flex-grow lg:ml-64 p-4 lg:p-8 pt-16 lg:pt-8 flex items-start justify-center">
         <div class="max-w-4xl w-full">
             
             <a href="daftar.php" class="inline-flex items-center text-slate-500 font-bold mb-6 hover:text-indigo-600 transition gap-2 text-lg">
@@ -69,9 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </a>
 
             <div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-50">
-                <div class="bg-indigo-600 p-10 text-white flex items-center justify-between">
-                    <div>
-                        <h2 class="text-3xl font-black uppercase tracking-tighter italic">Edit Data Buku</h2>
+            <div class="bg-indigo-600 p-6 lg:p-10 text-white flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl lg:text-3xl font-black uppercase tracking-tighter italic">Edit Data Buku</h2>
                         <p class="text-indigo-100 text-lg mt-1">Sesuaikan informasi buku: <strong><?= $buku['kode_buku']; ?></strong></p>
                     </div>
                     <div class="bg-white/10 p-6 rounded-3xl backdrop-blur-md">
@@ -79,8 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                 </div>
 
-                <form id="formEdit" action="" method="POST" class="p-12 space-y-8">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <form id="formEdit" action="" method="POST" class="p-6 lg:p-12 space-y-5 lg:space-y-8" novalidate>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-8">
                         
                         <div class="col-span-1">
                             <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Kode Buku (Terkunci)</label>
@@ -94,45 +96,66 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         </div>
 
                         <div class="col-span-1">
-                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Kategori</label>
-                            <select name="kategori" class="w-full px-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700">
-                                <option value="Umum" <?= $buku['kategori'] == 'Umum' ? 'selected' : ''; ?>>Umum</option>
-                                <option value="Sains" <?= $buku['kategori'] == 'Sains' ? 'selected' : ''; ?>>Sains</option>
-                                <option value="Fiksi" <?= $buku['kategori'] == 'Fiksi' ? 'selected' : ''; ?>>Fiksi</option>
-                                <option value="Sejarah" <?= $buku['kategori'] == 'Sejarah' ? 'selected' : ''; ?>>Sejarah</option>
-                                <option value="Teknologi" <?= $buku['kategori'] == 'Teknologi' ? 'selected' : ''; ?>>Teknologi</option>
-                                <option value="Sastra" <?= $buku['kategori'] == 'Sastra' ? 'selected' : ''; ?>>Sastra</option>
-                                <option value="Self Improvement" <?= $buku['kategori'] == 'Self Improvement' ? 'selected' : ''; ?>>Self Improvement</option>
+                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Jenis Buku <span class="text-red-500">*</span></label>
+                            <select name="jenis_buku" id="jenis_buku" onchange="toggleEbook(this.value)"
+                                    class="w-full px-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700">
+                                <option value="fisik"   <?= ($buku['jenis_buku']??'fisik')==='fisik'   ?'selected':'' ?>>📖 Buku Fisik</option>
+                                <option value="digital" <?= ($buku['jenis_buku']??'fisik')==='digital' ?'selected':'' ?>>💻 Digital (eBook)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-span-2" id="row_ebook" <?= ($buku['jenis_buku']??'fisik')==='digital' ? '' : 'style="display:none"' ?>>
+                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Link eBook <span class="text-red-500">*</span></label>
+                            <input type="url" name="link_ebook" id="link_ebook" value="<?= htmlspecialchars($buku['link_ebook'] ?? '') ?>" placeholder="https://..."
+                                   class="w-full px-8 py-5 bg-blue-50 border-2 border-blue-100 rounded-2xl outline-none focus:border-blue-300 transition-all font-bold text-slate-700">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Untuk Usia</label>
+                            <select name="kategori_usia" class="w-full px-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 font-bold text-slate-700">
+                                <option value="semua"    <?= ($buku['kategori_usia']??'semua')==='semua'    ?'selected':'' ?>>👥 Semua Usia</option>
+                                <option value="dewasa"   <?= ($buku['kategori_usia']??'semua')==='dewasa'   ?'selected':'' ?>>🧑 Dewasa (19+)</option>
+                                <option value="remaja"   <?= ($buku['kategori_usia']??'semua')==='remaja'   ?'selected':'' ?>>👦 Remaja (13-18)</option>
+                                <option value="anak-anak" <?= ($buku['kategori_usia']??'semua')==='anak-anak' ?'selected':'' ?>>👶 Anak-anak (5-12)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Jenis / Topik</label>
+                            <select name="kategori" class="w-full px-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 font-bold text-slate-700">
+                                <?php foreach(['Pertanian','Peternakan','Agama & Religi','Kesehatan','Pendidikan','Ekonomi','Teknologi','Sastra & Fiksi','Sejarah','Sains','Seni & Budaya','Umum'] as $kat): ?>
+                                <option value="<?= $kat ?>" <?= $buku['kategori']===$kat?'selected':'' ?>><?= $kat ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
 
                         <div class="col-span-2">
-                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Judul Lengkap</label>
-                            <input type="text" name="judul" value="<?= htmlspecialchars($buku['judul']); ?>" required
+                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Judul Lengkap <span class="text-red-500">*</span></label>
+                            <input type="text" name="judul" id="judul" value="<?= htmlspecialchars($buku['judul']); ?>"
                                    class="w-full px-8 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700 text-xl">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Penulis</label>
-                            <input type="text" name="penulis" value="<?= htmlspecialchars($buku['penulis']); ?>" required
+                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Penulis <span class="text-red-500">*</span></label>
+                            <input type="text" name="penulis" id="penulis" value="<?= htmlspecialchars($buku['penulis']); ?>"
                                    class="w-full px-8 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Penerbit</label>
-                            <input type="text" name="penerbit" value="<?= htmlspecialchars($buku['penerbit']); ?>" required
+                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Penerbit <span class="text-red-500">*</span></label>
+                            <input type="text" name="penerbit" id="penerbit" value="<?= htmlspecialchars($buku['penerbit']); ?>"
                                    class="w-full px-8 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Stok Tersedia</label>
-                            <input type="number" name="stok" value="<?= $buku['stok']; ?>" required
+                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Stok Tersedia <span class="text-red-500">*</span></label>
+                            <input type="number" name="stok" id="stok" value="<?= $buku['stok']; ?>"
                                    class="w-full px-8 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-slate-700 text-xl">
                         </div>
                     </div>
 
-                    <div class="pt-8 border-t border-slate-50 flex items-center justify-end gap-4">
-                        <a href="daftar.php" class="px-8 py-5 rounded-2xl font-bold text-slate-400 hover:text-slate-600 transition-all">Batal</a>
+                    <div class="pt-6 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-end gap-3">
+                        <a href="daftar.php" class="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:text-slate-600 transition-all text-center">Batal</a>
                         <button type="button" onclick="konfirmasiUpdate()" 
                                 class="flex-grow bg-indigo-600 text-white px-10 py-5 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all transform active:scale-95 flex items-center justify-center gap-3 text-lg">
                             <i class="fas fa-save"></i>
@@ -146,6 +169,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <script>
     function konfirmasiUpdate() {
+        const isDigital = document.getElementById('jenis_buku').value === 'digital';
+        const fields = [
+            { id: 'judul',   label: 'Judul Lengkap' },
+            { id: 'penulis', label: 'Penulis' },
+            { id: 'penerbit',label: 'Penerbit' },
+            { id: 'stok',    label: 'Stok Tersedia' },
+        ];
+        if (isDigital) fields.push({ id: 'link_ebook', label: 'Link eBook' });
+
+        const kosong = fields.filter(f => {
+            const el = document.getElementById(f.id);
+            return !el || el.value.trim() === '';
+        });
+
+        if (kosong.length > 0) {
+            const listHTML = kosong.map(f =>
+                `<li style="text-align:left;"><i class="fas fa-circle-xmark" style="color:#ef4444;margin-right:6px;"></i>${f.label}</li>`
+            ).join('');
+            kosong.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (el) el.classList.add('border-red-400');
+            });
+            Swal.fire({
+                icon: 'warning',
+                title: 'Data Belum Lengkap!',
+                html: `<p style="margin-bottom:10px;color:#64748b;">Mohon lengkapi field berikut:</p><ul style="list-style:none;padding:0;">${listHTML}</ul>`,
+                confirmButtonText: 'OK, Saya Lengkapi',
+                confirmButtonColor: '#4f46e5',
+                customClass: { popup: 'rounded-3xl' }
+            }).then(() => {
+                const firstEl = document.getElementById(kosong[0].id);
+                if (firstEl) firstEl.focus();
+            });
+            return;
+        }
+
         Swal.fire({
             title: 'Simpan Perubahan?',
             text: "Data buku akan diperbarui secara permanen.",
@@ -162,7 +221,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         })
     }
-    </script>
+    function toggleEbook(val) {
+        const row  = document.getElementById('row_ebook');
+        const link = document.getElementById('link_ebook');
+        const show = val === 'digital';
+        row.style.display = show ? '' : 'none';
+    }
+
+    // Hapus highlight merah saat user mulai mengetik
+    document.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', () => el.classList.remove('border-red-400'));
+    });</script>
 
     <?php if(isset($error_db)): ?>
     <script>
