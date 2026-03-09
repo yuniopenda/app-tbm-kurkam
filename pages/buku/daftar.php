@@ -99,72 +99,103 @@ $data = mysqli_query($conn, "SELECT * FROM m_buku $where ORDER BY id DESC LIMIT 
                 <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-widest">
                     <tr>
                         <th class="px-5 py-5 font-black text-center w-10 border-b border-slate-100">No</th>
-                        <th class="px-5 py-5 font-black border-b border-slate-100">Buku</th>
+                        <th class="px-5 py-5 font-black border-b border-slate-100">Sampul</th> <th class="px-5 py-5 font-black border-b border-slate-100">Buku</th>
                         <th class="px-5 py-5 font-black border-b border-slate-100">Penulis / Penerbit</th>
                         <th class="px-5 py-5 font-black border-b border-slate-100">Jenis & Usia</th>
                         <th class="px-5 py-5 font-black text-center border-b border-slate-100">Stok</th>
                         <th class="px-5 py-5 font-black text-center border-b border-slate-100">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
-                <?php $no = $awal + 1; $found = false; while($row = mysqli_fetch_assoc($data)): $found = true; ?>
-                    <tr class="hover:bg-slate-50/60 transition group">
-                        <td class="px-5 py-4 text-center text-xs font-bold text-slate-300"><?= $no++ ?></td>
+<tbody class="divide-y divide-slate-100">
+            <?php 
+            $no = $awal + 1; 
+            $found = false; 
+            while($row = mysqli_fetch_assoc($data)): 
+                $found = true; 
+            ?>
+                <tr class="hover:bg-slate-50/60 transition group">
+                    <td class="px-5 py-4 text-center text-xs font-bold text-slate-300"><?= $no++ ?></td>
+                    
                         <td class="px-5 py-4">
-                            <div class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded w-fit mb-1"><?= $row['kode_buku'] ?></div>
-                            <div class="font-bold text-slate-800"><?= htmlspecialchars($row['judul']) ?></div>
-                            <div class="text-xs text-slate-400 mt-0.5"><?= htmlspecialchars($row['kategori'] ?? '-') ?></div>
-                            <?php if($row['jenis_buku'] === 'digital' && !empty($row['link_ebook'])): ?>
-                            <a href="<?= htmlspecialchars($row['link_ebook']) ?>" target="_blank"
-                               class="inline-flex items-center gap-1 text-xs text-blue-600 font-bold mt-1 hover:underline">
-                                <i class="fas fa-external-link-alt text-[9px]"></i> Buka eBook
+                            <div class="w-14 h-20 bg-slate-100 rounded-xl overflow-hidden shadow-sm border border-slate-200 flex items-center justify-center">
+                                <?php 
+                                $nama_file = $row['gambar'];
+                                
+                                // Alamat untuk ditampilkan di Browser (URL)
+                                $path_browser = "/app-tbm-kurkam/assets/" . $nama_file; 
+                                
+                                // Alamat untuk diperiksa oleh Server (Path Fisik)
+                                $path_fisik = $_SERVER['DOCUMENT_ROOT'] . "/app-tbm-kurkam/assets/" . $nama_file;
+
+                                if (!empty($nama_file) && file_exists($path_fisik)) : 
+                                ?>
+                                    <img src="<?= $path_browser ?>" class="w-full h-full object-cover">
+                                <?php else : ?>
+                                    <div class="text-center p-1">
+                                        <i class="fas fa-file-image text-slate-300 text-lg"></i>
+                                        <p class="text-[7px] text-red-500 font-bold leading-tight">
+                                            <?= empty($nama_file) ? 'DB KOSONG' : 'FILE TIDAK ADA' ?>
+                                        </p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+
+                    <td class="px-5 py-4">
+                        <div class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded w-fit mb-1"><?= $row['kode_buku'] ?></div>
+                        <div class="font-bold text-slate-800"><?= htmlspecialchars($row['judul']) ?></div>
+                        <div class="text-xs text-slate-400 mt-0.5"><?= htmlspecialchars($row['kategori'] ?? '-') ?></div>
+                        <?php if($row['jenis_buku'] === 'digital' && !empty($row['link_ebook'])): ?>
+                        <a href="<?= htmlspecialchars($row['link_ebook']) ?>" target="_blank"
+                           class="inline-flex items-center gap-1 text-xs text-blue-600 font-bold mt-1 hover:underline">
+                            <i class="fas fa-external-link-alt text-[9px]"></i> Buka eBook
+                        </a>
+                        <?php endif; ?>
+                    </td>
+                    <td class="px-5 py-4">
+                        <div class="font-bold text-slate-700 text-sm"><?= htmlspecialchars($row['penulis'] ?? '-') ?></div>
+                        <div class="text-xs text-slate-400"><?= htmlspecialchars($row['penerbit'] ?? '-') ?></div>
+                    </td>
+                    <td class="px-5 py-4">
+                        <?php if($row['jenis_buku'] === 'digital'): ?>
+                            <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-full">💻 Digital</span>
+                        <?php else: ?>
+                            <span class="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black rounded-full">📖 Fisik</span>
+                        <?php endif; ?>
+                        <div class="mt-1">
+                        <?php
+                        $kat_usia = $row['kategori_usia'] ?? 'semua';
+                        $usia_badge = ['dewasa'=>'bg-blue-100 text-blue-700', 'remaja'=>'bg-purple-100 text-purple-700', 'anak-anak'=>'bg-pink-100 text-pink-700', 'semua'=>'bg-gray-100 text-gray-600'];
+                        $usia_label = ['dewasa'=>'🧑 Dewasa', 'remaja'=>'👦 Remaja', 'anak-anak'=>'👶 Anak-anak', 'semua'=>'👥 Semua'];
+                        ?>
+                            <span class="px-2.5 py-1 <?= $usia_badge[$kat_usia] ?? 'bg-gray-100 text-gray-600' ?> text-[10px] font-black rounded-full"><?= $usia_label[$kat_usia] ?? $kat_usia ?></span>
+                        </div>
+                    </td>
+                    <td class="px-5 py-4 text-center">
+                        <?php if($row['stok'] > 0): ?>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full">
+                                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> <?= $row['stok'] ?> Tersedia
+                            </span>
+                        <?php else: ?>
+                            <span class="px-3 py-1 bg-red-100 text-red-600 text-xs font-black rounded-full italic">Habis</span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="px-5 py-4 text-center">
+                        <div class="flex justify-center gap-2">
+                            <a href="edit.php?id=<?= $row['id'] ?>" class="w-9 h-9 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition">
+                                <i class="fas fa-edit text-sm"></i>
                             </a>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-5 py-4">
-                            <div class="font-bold text-slate-700 text-sm"><?= htmlspecialchars($row['penulis'] ?? '-') ?></div>
-                            <div class="text-xs text-slate-400"><?= htmlspecialchars($row['penerbit'] ?? '-') ?></div>
-                        </td>
-                        <td class="px-5 py-4">
-                            <?php if($row['jenis_buku'] === 'digital'): ?>
-                                <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-full">💻 Digital</span>
-                            <?php else: ?>
-                                <span class="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black rounded-full">📖 Fisik</span>
-                            <?php endif; ?>
-                            <div class="mt-1">
-                            <?php
-                            $kat_usia = $row['kategori_usia'] ?? 'semua';
-                            $usia_badge = ['dewasa'=>'bg-blue-100 text-blue-700', 'remaja'=>'bg-purple-100 text-purple-700', 'anak-anak'=>'bg-pink-100 text-pink-700', 'semua'=>'bg-gray-100 text-gray-600'];
-                            $usia_label = ['dewasa'=>'🧑 Dewasa', 'remaja'=>'👦 Remaja', 'anak-anak'=>'👶 Anak-anak', 'semua'=>'👥 Semua'];
-                            ?>
-                                <span class="px-2.5 py-1 <?= $usia_badge[$kat_usia] ?? 'bg-gray-100 text-gray-600' ?> text-[10px] font-black rounded-full"><?= $usia_label[$kat_usia] ?? $kat_usia ?></span>
-                            </div>
-                        </td>
-                        <td class="px-5 py-4 text-center">
-                            <?php if($row['stok'] > 0): ?>
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full">
-                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> <?= $row['stok'] ?> Tersedia
-                                </span>
-                            <?php else: ?>
-                                <span class="px-3 py-1 bg-red-100 text-red-600 text-xs font-black rounded-full italic">Habis</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-5 py-4 text-center">
-                            <div class="flex justify-center gap-2">
-                                <a href="edit.php?id=<?= $row['id'] ?>" class="w-9 h-9 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition">
-                                    <i class="fas fa-edit text-sm"></i>
-                                </a>
-                                <button onclick="hapusBuku(<?= $row['id'] ?>)" class="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition">
-                                    <i class="fas fa-trash-alt text-sm"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-                <?php if(!$found): ?>
-                    <tr><td colspan="6" class="px-6 py-16 text-center text-slate-400 font-bold italic">Tidak ada buku ditemukan...</td></tr>
-                <?php endif; ?>
-                </tbody>
+                            <button onclick="hapusBuku(<?= $row['id'] ?>)" class="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition">
+                                <i class="fas fa-trash-alt text-sm"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            <?php endwhile; ?>
+            <?php if(!$found): ?>
+                <tr><td colspan="7" class="px-6 py-16 text-center text-slate-400 font-bold italic">Tidak ada buku ditemukan...</td></tr>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
         <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">

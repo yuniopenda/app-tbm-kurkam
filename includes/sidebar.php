@@ -105,11 +105,11 @@ if ($role !== 'anggota' && isset($conn)) {
                 <span>Daftar Buku</span>
             </a>
 
-            <a href="/app-tbm-kurkam/pages/buku/tambah.php"
+            <!-- <a href="/app-tbm-kurkam/pages/buku/tambah.php"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm <?= isActive('/buku/tambah') ?>">
                 <i class="fas fa-plus-circle w-4 text-center"></i>
                 <span>Tambah Buku</span>
-            </a>
+            </a> -->
 
             <a href="/app-tbm-kurkam/pages/buku/template_excel.php" target="_blank"
                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/10 text-indigo-100 text-sm">

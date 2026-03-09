@@ -2,7 +2,27 @@
 session_start();
 if (!isset($_SESSION['login'])) { header("Location: /app-tbm-kurkam/login.php"); exit; }
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'anggota') { header("Location: /app-tbm-kurkam/pages/user/katalog.php"); exit; }
+
+// 1. Pastikan koneksi sudah benar
 include(__DIR__ . '/../../config/koneksi.php');
+
+// --- START: LOGIKA KODE OTOMATIS ---
+// Ambil kode terbesar dari kolom kode_buku
+$query_kode = mysqli_query($conn, "SELECT kode_buku FROM m_buku ORDER BY kode_buku DESC LIMIT 1");
+$data_kode  = mysqli_fetch_array($query_kode);
+
+if ($data_kode) {
+    $kodeTerakhir = $data_kode['kode_buku'];
+    // Mengambil angka saja dari string (misal BK-001 menjadi 1)
+    $angka = (int) preg_replace('/[^0-9]/', '', $kodeTerakhir);
+    $noUrut = $angka + 1;
+} else {
+    // Jika tabel masih kosong, mulai dari 1
+    $noUrut = 1;
+}
+
+// Membentuk kembali kode baru dengan format 3 digit (contoh: BK-002)
+$kode_otomatis = "BK-" . sprintf("%03s", $noUrut);
 
 // Proses simpan buku baru
 if (isset($_POST['simpan'])) {
@@ -64,8 +84,12 @@ if (isset($_POST['simpan'])) {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
                     <div>
                         <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Kode Buku (dari perpustakaan) <span class="text-red-500">*</span></label>
-                        <input type="text" name="kode_buku" id="kode_buku" placeholder="Contoh: BK-001"
-                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                        <input type="text" 
+                                name="kode_buku" 
+                                id="kode_buku" 
+                                value="<?php echo $kode_otomatis; ?>" 
+                                class="w-full px-5 py-4 bg-slate-100 border-2 border-slate-200 rounded-2xl outline-none font-bold text-slate-700 cursor-not-allowed" 
+                                readonly>
                     </div>
                     <div>
                         <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Jenis Buku <span class="text-red-500">*</span></label>

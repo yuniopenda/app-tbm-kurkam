@@ -22,6 +22,7 @@ if (isset($_POST['simpan'])) {
     $kategori_usia = $_POST['kategori_usia'];
     $tanggal_daftar= date('Y-m-d');
     $created_by    = $_SESSION['user'];
+    $tanggal_lahir = date('Y-m-d');
 
     // Field opsional: kirim NULL jika kosong agar tidak error tipe data di MySQL
     $tgl_raw       = trim($_POST['tanggal_lahir'] ?? '');
