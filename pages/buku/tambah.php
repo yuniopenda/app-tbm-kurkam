@@ -6,35 +6,45 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'anggota') { header("Locat
 // 1. Pastikan koneksi sudah benar
 include(__DIR__ . '/../../config/koneksi.php');
 
-// --- START: LOGIKA KODE OTOMATIS ---
-// Ambil kode terbesar dari kolom kode_buku
-$query_kode = mysqli_query($conn, "SELECT kode_buku FROM m_buku ORDER BY kode_buku DESC LIMIT 1");
-$data_kode  = mysqli_fetch_array($query_kode);
+// ── Generate kode buku berikutnya yang pasti belum ada ────────────────
+function generateKodeBuku($conn) {
+    // Ambil angka terbesar secara numerik dari kode bertipe BK-NNN
+    $q = mysqli_query($conn,
+        "SELECT MAX(CAST(SUBSTRING(kode_buku, 4) AS UNSIGNED)) AS maxn
+         FROM m_buku
+         WHERE kode_buku REGEXP '^BK-[0-9]+$'"
+    );
+    $row    = mysqli_fetch_assoc($q);
+    $nextN  = (int)($row['maxn'] ?? 0) + 1;
 
-if ($data_kode) {
-    $kodeTerakhir = $data_kode['kode_buku'];
-    // Mengambil angka saja dari string (misal BK-001 menjadi 1)
-    $angka = (int) preg_replace('/[^0-9]/', '', $kodeTerakhir);
-    $noUrut = $angka + 1;
-} else {
-    // Jika tabel masih kosong, mulai dari 1
-    $noUrut = 1;
+    // Loop: pastikan kode belum dipakai (antisipasi data manual/gap)
+    do {
+        $kandidat = 'BK-' . sprintf('%03d', $nextN);
+        $cek = mysqli_fetch_assoc(mysqli_query($conn,
+            "SELECT id FROM m_buku WHERE kode_buku = '$kandidat' LIMIT 1"
+        ));
+        if ($cek) $nextN++; // sudah ada → naik terus
+    } while ($cek);
+
+    return $kandidat;
 }
 
-// Membentuk kembali kode baru dengan format 3 digit (contoh: BK-002)
-$kode_otomatis = "BK-" . sprintf("%03s", $noUrut);
+$kode_otomatis = generateKodeBuku($conn);
+
 
 // Proses simpan buku baru
 if (isset($_POST['simpan'])) {
-    $kode_buku   = mysqli_real_escape_string($conn, $_POST['kode_buku']);
+    // Regenerate kode dari DB saat submit → selalu fresh, tidak bisa conflict
+    $kode_buku   = generateKodeBuku($conn);
     $judul       = mysqli_real_escape_string($conn, $_POST['judul']);
     $penulis     = mysqli_real_escape_string($conn, $_POST['penulis']);
     $penerbit    = mysqli_real_escape_string($conn, $_POST['penerbit']);
-    $kategori    = mysqli_real_escape_string($conn, $_POST['kategori']);   // jenis topik: pertanian, dll
+    $kategori    = mysqli_real_escape_string($conn, $_POST['kategori']);
     $jenis_buku  = $_POST['jenis_buku'];
     $link_ebook  = mysqli_real_escape_string($conn, $_POST['link_ebook'] ?? '');
     $kat_usia    = $_POST['kategori_usia'];
     $stok        = (int)$_POST['stok'];
+    $kode_otomatis = $kode_buku; // update tampilan jika ada error
 
     // Proses upload gambar
     $nama_gambar = '';
@@ -54,14 +64,20 @@ if (isset($_POST['simpan'])) {
         }
     }
 
+    // INSERT
     $nama_gambar_db = mysqli_real_escape_string($conn, $nama_gambar);
     $q = "INSERT INTO m_buku (kode_buku, judul, penulis, penerbit, kategori, jenis_buku, link_ebook, kategori_usia, stok, gambar)
           VALUES ('$kode_buku','$judul','$penulis','$penerbit','$kategori','$jenis_buku','$link_ebook','$kat_usia','$stok','$nama_gambar_db')";
+
+    mysqli_report(MYSQLI_REPORT_OFF);
     if (mysqli_query($conn, $q)) {
         $_SESSION['sukses_tambah'] = true;
         header("Location: daftar.php"); exit;
     } else {
-        $error_db = mysqli_error($conn);
+        $err = mysqli_error($conn);
+        $error_db = str_contains($err, 'uplicate')
+            ? "Kode buku <strong>$kode_buku</strong> sudah digunakan. Silakan coba lagi."
+            : "Gagal menyimpan: $err";
     }
 }
 ?>
@@ -97,6 +113,21 @@ if (isset($_POST['simpan'])) {
                 <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl text-red-700 text-sm font-bold">
                     <i class="fas fa-exclamation-circle mr-2"></i><?= $error_db ?>
                 </div>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Kode Sudah Digunakan!',
+                        html: '<?= addslashes($error_db) ?>',
+                        confirmButtonColor: '#4f46e5',
+                        confirmButtonText: 'Ganti Kode',
+                        customClass: { popup: 'rounded-[2rem]' }
+                    }).then(() => {
+                        const el = document.getElementById('kode_buku');
+                        if (el) { el.focus(); el.select(); el.classList.add('!border-red-400'); }
+                    });
+                });
+                </script>
                 <?php endif; ?>
                 <?php if(isset($error_upload)): ?>
                 <div class="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-xl text-orange-700 text-sm font-bold">
