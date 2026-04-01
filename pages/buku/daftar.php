@@ -122,19 +122,19 @@ $data = mysqli_query($conn, "SELECT * FROM m_buku $where ORDER BY id DESC LIMIT 
                                 $nama_file = $row['gambar'];
                                 
                                 // Alamat untuk ditampilkan di Browser (URL)
-                                $path_browser = "/app-tbm-kurkam/assets/" . $nama_file; 
+                                $path_browser = "/app-tbm-kurkam/assets/covers/" . $nama_file; 
                                 
-                                // Alamat untuk diperiksa oleh Server (Path Fisik)
-                                $path_fisik = $_SERVER['DOCUMENT_ROOT'] . "/app-tbm-kurkam/assets/" . $nama_file;
+                                // Alamat untuk diperiksa oleh Server (Path Fisik) - pakai __DIR__ lebih andal di XAMPP
+                                $path_fisik = realpath(__DIR__ . '/../../assets/covers/' . $nama_file);
 
-                                if (!empty($nama_file) && file_exists($path_fisik)) : 
+                                if (!empty($nama_file) && $path_fisik && file_exists($path_fisik)) : 
                                 ?>
                                     <img src="<?= $path_browser ?>" class="w-full h-full object-cover">
                                 <?php else : ?>
                                     <div class="text-center p-1">
                                         <i class="fas fa-file-image text-slate-300 text-lg"></i>
-                                        <p class="text-[7px] text-red-500 font-bold leading-tight">
-                                            <?= empty($nama_file) ? 'DB KOSONG' : 'FILE TIDAK ADA' ?>
+                                        <p class="text-[7px] text-<?= empty($nama_file) ? 'slate' : 'red' ?>-400 font-bold leading-tight">
+                                            <?= empty($nama_file) ? 'Belum ada' : 'File hilang' ?>
                                         </p>
                                     </div>
                                 <?php endif; ?>

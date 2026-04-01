@@ -39,6 +39,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     link_ebook = '$link_ebook', kategori_usia = '$kat_usia', stok = '$stok' 
                     WHERE id = '$id'";
 
+    // Proses upload gambar baru jika ada
+    if (!empty($_FILES['gambar']['name'])) {
+        $ext_allowed = ['jpg','jpeg','png','webp','gif'];
+        $ext = strtolower(pathinfo($_FILES['gambar']['name'], PATHINFO_EXTENSION));
+        if (in_array($ext, $ext_allowed)) {
+            $upload_dir = realpath(__DIR__ . '/../../assets/covers') . DIRECTORY_SEPARATOR;
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+            $nama_gambar_baru = 'cover_' . time() . '_' . uniqid() . '.' . $ext;
+            if (move_uploaded_file($_FILES['gambar']['tmp_name'], $upload_dir . $nama_gambar_baru)) {
+                // Hapus gambar lama jika ada
+                if (!empty($buku['gambar'])) {
+                    $gambar_lama = $upload_dir . $buku['gambar'];
+                    if (file_exists($gambar_lama)) unlink($gambar_lama);
+                }
+                $nama_gambar_esc = mysqli_real_escape_string($conn, $nama_gambar_baru);
+                $update_query = "UPDATE m_buku SET 
+                    judul = '$judul', penulis = '$penulis', penerbit = '$penerbit', 
+                    kategori = '$kategori', jenis_buku = '$jenis_buku', 
+                    link_ebook = '$link_ebook', kategori_usia = '$kat_usia', stok = '$stok',
+                    gambar = '$nama_gambar_esc' 
+                    WHERE id = '$id'";
+            } else {
+                $error_upload = 'Gagal mengupload gambar.';
+            }
+        } else {
+            $error_upload = 'Format gambar tidak didukung. Gunakan JPG, PNG, atau WEBP.';
+        }
+    }
+
     if (mysqli_query($conn, $update_query)) {
         $_SESSION['sukses_edit'] = true;
         header("Location: daftar.php");
@@ -81,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                 </div>
 
-                <form id="formEdit" action="" method="POST" class="p-6 lg:p-12 space-y-5 lg:space-y-8" novalidate>
+                <form id="formEdit" action="" method="POST" enctype="multipart/form-data" class="p-6 lg:p-12 space-y-5 lg:space-y-8" novalidate>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-8">
                         
                         <div class="col-span-1">
@@ -154,6 +183,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         </div>
                     </div>
 
+                    <!-- Upload Gambar Cover -->
+                    <div class="col-span-2">
+                        <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Gambar Cover Buku <span class="text-slate-300 font-normal">(opsional – kosongkan jika tidak ingin mengubah)</span></label>
+                        <div class="flex items-start gap-4">
+                            <!-- Preview gambar -->
+                            <div class="w-24 h-32 bg-slate-100 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300 flex items-center justify-center shrink-0">
+                                <?php
+                                $gambar_ada = !empty($buku['gambar']);
+                                $path_browser = '/app-tbm-kurkam/assets/covers/' . $buku['gambar'];
+                                $path_fisik   = $gambar_ada ? realpath(__DIR__ . '/../../assets/covers/' . $buku['gambar']) : false;
+                                $gambar_valid = $gambar_ada && $path_fisik && file_exists($path_fisik);
+                                ?>
+                                <img id="previewImg" src="<?= $gambar_valid ? $path_browser : '' ?>" class="w-full h-full object-cover <?= $gambar_valid ? '' : 'hidden' ?>" alt="Cover">
+                                <i class="fas fa-image text-3xl text-slate-300 <?= $gambar_valid ? 'hidden' : '' ?>" id="previewIcon"></i>
+                            </div>
+                            <!-- Input file -->
+                            <div class="flex-grow">
+                                <label for="gambar" class="flex flex-col items-center justify-center w-full h-32 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition">
+                                    <i class="fas fa-cloud-upload-alt text-2xl text-slate-400 mb-2"></i>
+                                    <span class="text-sm text-slate-400 font-bold" id="namaFile"><?= $gambar_valid ? 'Ganti gambar cover' : 'Klik untuk pilih gambar' ?></span>
+                                    <span class="text-xs text-slate-300 mt-1">JPG, PNG, WEBP (maks. 5MB)</span>
+                                    <input type="file" name="gambar" id="gambar" accept="image/*" class="hidden" onchange="previewGambar(this)">
+                                </label>
+                                <?php if($gambar_valid): ?>
+                                <p class="text-xs text-slate-400 mt-2 ml-1"><i class="fas fa-check-circle text-emerald-500 mr-1"></i>Gambar saat ini: <strong><?= htmlspecialchars($buku['gambar']) ?></strong></p>
+                                <?php elseif($gambar_ada): ?>
+                                <p class="text-xs text-red-400 mt-2 ml-1"><i class="fas fa-exclamation-circle mr-1"></i>File gambar tidak ditemukan di server.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php if(isset($error_upload)): ?>
+                        <div class="mt-3 bg-orange-50 border-l-4 border-orange-400 p-3 rounded-xl text-orange-700 text-sm font-bold">
+                            <i class="fas fa-image mr-2"></i><?= $error_upload ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
                     <div class="pt-6 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-end gap-3">
                         <a href="daftar.php" class="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:text-slate-600 transition-all text-center">Batal</a>
                         <button type="button" onclick="konfirmasiUpdate()" 
@@ -168,6 +234,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </main>
 
     <script>
+    function previewGambar(input) {
+        const icon = document.getElementById('previewIcon');
+        const img  = document.getElementById('previewImg');
+        const label = document.getElementById('namaFile');
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                img.src = e.target.result;
+                img.classList.remove('hidden');
+                if (icon) icon.classList.add('hidden');
+                if (label) label.textContent = input.files[0].name;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
     function konfirmasiUpdate() {
         const isDigital = document.getElementById('jenis_buku').value === 'digital';
         const fields = [

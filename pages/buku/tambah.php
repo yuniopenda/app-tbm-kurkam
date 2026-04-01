@@ -36,8 +36,27 @@ if (isset($_POST['simpan'])) {
     $kat_usia    = $_POST['kategori_usia'];
     $stok        = (int)$_POST['stok'];
 
-    $q = "INSERT INTO m_buku (kode_buku, judul, penulis, penerbit, kategori, jenis_buku, link_ebook, kategori_usia, stok)
-          VALUES ('$kode_buku','$judul','$penulis','$penerbit','$kategori','$jenis_buku','$link_ebook','$kat_usia','$stok')";
+    // Proses upload gambar
+    $nama_gambar = '';
+    if (!empty($_FILES['gambar']['name'])) {
+        $ext_allowed = ['jpg','jpeg','png','webp','gif'];
+        $ext = strtolower(pathinfo($_FILES['gambar']['name'], PATHINFO_EXTENSION));
+        if (in_array($ext, $ext_allowed)) {
+            $upload_dir = realpath(__DIR__ . '/../../assets/covers') . DIRECTORY_SEPARATOR;
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+            $nama_gambar = 'cover_' . time() . '_' . uniqid() . '.' . $ext;
+            if (!move_uploaded_file($_FILES['gambar']['tmp_name'], $upload_dir . $nama_gambar)) {
+                $nama_gambar = '';
+                $error_upload = 'Gagal mengupload gambar.';
+            }
+        } else {
+            $error_upload = 'Format gambar tidak didukung. Gunakan JPG, PNG, atau WEBP.';
+        }
+    }
+
+    $nama_gambar_db = mysqli_real_escape_string($conn, $nama_gambar);
+    $q = "INSERT INTO m_buku (kode_buku, judul, penulis, penerbit, kategori, jenis_buku, link_ebook, kategori_usia, stok, gambar)
+          VALUES ('$kode_buku','$judul','$penulis','$penerbit','$kategori','$jenis_buku','$link_ebook','$kat_usia','$stok','$nama_gambar_db')";
     if (mysqli_query($conn, $q)) {
         $_SESSION['sukses_tambah'] = true;
         header("Location: daftar.php"); exit;
@@ -72,11 +91,16 @@ if (isset($_POST['simpan'])) {
                 </div>
                 <div class="bg-white/10 p-5 rounded-3xl"><i class="fas fa-book-medical text-4xl"></i></div>
             </div>
-            <form action="" method="POST" class="p-6 lg:p-10 space-y-5 lg:space-y-6" id="formTambahBuku" novalidate>
+            <form action="" method="POST" enctype="multipart/form-data" class="p-6 lg:p-10 space-y-5 lg:space-y-6" id="formTambahBuku" novalidate>
 
                 <?php if(isset($error_db)): ?>
                 <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl text-red-700 text-sm font-bold">
                     <i class="fas fa-exclamation-circle mr-2"></i><?= $error_db ?>
+                </div>
+                <?php endif; ?>
+                <?php if(isset($error_upload)): ?>
+                <div class="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-xl text-orange-700 text-sm font-bold">
+                    <i class="fas fa-image mr-2"></i><?= $error_upload ?>
                 </div>
                 <?php endif; ?>
 
@@ -166,6 +190,25 @@ if (isset($_POST['simpan'])) {
                     </div>
                 </div>
 
+                <!-- Upload Gambar Cover -->
+                <div>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Gambar Cover Buku <span class="text-slate-300 font-normal">(opsional)</span></label>
+                    <div class="flex items-start gap-4">
+                        <div id="previewWrap" class="w-24 h-32 bg-slate-100 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300 flex items-center justify-center shrink-0">
+                            <i class="fas fa-image text-3xl text-slate-300" id="previewIcon"></i>
+                            <img id="previewImg" src="" class="w-full h-full object-cover hidden" alt="Preview">
+                        </div>
+                        <div class="flex-grow">
+                            <label for="gambar" class="flex flex-col items-center justify-center w-full h-32 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition">
+                                <i class="fas fa-cloud-upload-alt text-2xl text-slate-400 mb-2"></i>
+                                <span class="text-sm text-slate-400 font-bold">Klik untuk pilih gambar</span>
+                                <span class="text-xs text-slate-300 mt-1">JPG, PNG, WEBP (maks. 5MB)</span>
+                                <input type="file" name="gambar" id="gambar" accept="image/*" class="hidden" onchange="previewGambar(this)">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="pt-6 border-t border-slate-50 flex flex-col sm:flex-row gap-3">
                     <a href="daftar.php" class="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 transition text-center">Batal</a>
                     <button type="submit" name="simpan"
@@ -178,6 +221,19 @@ if (isset($_POST['simpan'])) {
     </div>
 </main>
 <script>
+function previewGambar(input) {
+    const icon = document.getElementById('previewIcon');
+    const img  = document.getElementById('previewImg');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            img.src = e.target.result;
+            img.classList.remove('hidden');
+            icon.classList.add('hidden');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
 function toggleEbook(val) {
     const row = document.getElementById('row_ebook');
     const link = document.getElementById('link_ebook');

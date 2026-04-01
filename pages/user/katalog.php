@@ -89,9 +89,21 @@ $data = mysqli_query($conn, "SELECT * FROM m_buku $where ORDER BY judul ASC");
             $color = $usia_colors[$kat_usia] ?? 'slate';
         ?>
         <div class="book-card bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl group">
-            <!-- Cover dummy -->
-            <div class="h-40 bg-gradient-to-br from-<?= $color ?>-100 to-<?= $color ?>-200 flex items-center justify-center relative">
-                <i class="fas fa-book text-5xl text-<?= $color ?>-300"></i>
+            <!-- Cover Buku -->
+            <div class="h-40 bg-gradient-to-br from-<?= $color ?>-100 to-<?= $color ?>-200 flex items-center justify-center relative overflow-hidden">
+                <?php
+                $nama_gambar  = $b['gambar'] ?? '';
+                $path_browser = '/app-tbm-kurkam/assets/covers/' . $nama_gambar;
+                // Gunakan __DIR__ based path - lebih andal di XAMPP Windows
+                $path_fisik   = $nama_gambar ? realpath(__DIR__ . '/../../assets/covers/' . $nama_gambar) : false;
+                $punya_gambar = !empty($nama_gambar) && $path_fisik && file_exists($path_fisik);
+                ?>
+                <?php if ($punya_gambar): ?>
+                    <img src="<?= $path_browser ?>" alt="<?= htmlspecialchars($b['judul']) ?>"
+                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <?php else: ?>
+                    <i class="fas fa-book text-5xl text-<?= $color ?>-300"></i>
+                <?php endif; ?>
                 <div class="absolute top-3 right-3 flex gap-1.5">
                     <?php if($jenis === 'digital'): ?>
                     <span class="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full">💻 Digital</span>
