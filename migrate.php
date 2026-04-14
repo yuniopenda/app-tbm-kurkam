@@ -23,6 +23,21 @@ $migrations = [
 
     // data lama default
     "UPDATE `m_anggota` SET `kategori_usia` = 'dewasa' WHERE `kategori_usia` IS NULL OR `kategori_usia` = ''",
+
+    // Migration V3 - New Requirements
+    "ALTER TABLE `m_anggota` ADD COLUMN `umur` INT NULL AFTER `tanggal_lahir`",
+    "ALTER TABLE `t_peminjaman` ADD COLUMN `metode_pembayaran` ENUM('Tunai', 'Non-tunai') NULL AFTER `denda`",
+    "ALTER TABLE `t_peminjaman` ADD COLUMN `bukti_pembayaran` TEXT NULL AFTER `metode_pembayaran`",
+    "CREATE TABLE IF NOT EXISTS `log_hapus_data` (
+      `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+      `nama_tabel` varchar(100) NOT NULL,
+      `data_id` bigint(20) NOT NULL,
+      `data_json` longtext NOT NULL,
+      `dihapus_oleh` varchar(100) NOT NULL,
+      `dihapus_pada` timestamp NOT NULL DEFAULT current_timestamp(),
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
+    "ALTER TABLE `m_users` MODIFY COLUMN `role` ENUM('admin', 'petugas', 'anggota') DEFAULT 'admin'",
 ];
 
 $results = [];
@@ -57,7 +72,7 @@ while ($rr = mysqli_fetch_assoc($r)) $cols_buku[] = $rr['Field'];
 <body class="bg-slate-100 p-8">
     <div class="max-w-3xl mx-auto">
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 mb-6">
-            <h1 class="text-2xl font-black text-slate-800 mb-2">🔧 Migration V2 - TBM Kurung Kambing</h1>
+            <h1 class="text-2xl font-black text-slate-800 mb-2">🔧 Migration V3 - TBM Kurung Kambing</h1>
             <p class="text-slate-500 text-sm">Jalankan sekali, lalu <b class="text-red-500">hapus file migrate.php</b> ini untuk keamanan.</p>
         </div>
 

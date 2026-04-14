@@ -114,13 +114,20 @@ $badge = ['dewasa' => ['bg-blue-100 text-blue-700', '🧑 Dewasa'],
                             [$cls, $label] = $badge[$kat] ?? ['bg-gray-100 text-gray-600', $kat];
                             ?>
                             <span class="px-3 py-1 text-xs font-black rounded-full <?= $cls ?>"><?= $label ?></span>
-                            <?php $tgl_lahir = $row['tanggal_lahir'] ?? ''; if($tgl_lahir && $tgl_lahir !== '0000-00-00'): ?>
+                            <?php 
+                            $tgl_lahir = $row['tanggal_lahir'] ?? ''; 
+                            $umur_db   = $row['umur'] ?? '';
+                            if($tgl_lahir && $tgl_lahir !== '0000-00-00'): ?>
                             <div class="text-[10px] text-slate-400 mt-1">
                                 <?php
                                 $lahir = new DateTime($tgl_lahir);
                                 $usia = $lahir->diff(new DateTime())->y;
                                 echo "$usia tahun";
                                 ?>
+                            </div>
+                            <?php elseif($umur_db): ?>
+                            <div class="text-[10px] text-slate-400 mt-1">
+                                <?= $umur_db ?> tahun
                             </div>
                             <?php endif; ?>
                         </td>

@@ -8,7 +8,10 @@ include(__DIR__ . '/../../config/koneksi.php');
 
 // 1. Ambil ID dari URL
 if (isset($_GET['id'])) {
-    $id = $_GET['id'];
+    $id = mysqli_real_escape_string($conn, $_GET['id']);
+    
+    // Log data sebelum dihapus
+    logDeletion($conn, 'm_buku', $id, $_SESSION['user'] ?? 'System');
 
     // 2. Jalankan query hapus
     $query_hapus = "DELETE FROM m_buku WHERE id = '$id'";

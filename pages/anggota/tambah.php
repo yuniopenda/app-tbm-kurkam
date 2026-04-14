@@ -15,36 +15,33 @@ $maxn  = (int)(mysqli_fetch_assoc($q)['n'] ?? 0);
 $kodeOtomatis = "$prefix-$tahun" . sprintf("%03d", $maxn + 1);
 
 // --- Proses Simpan ---
-if (isset($_POST['simpan'])) {
-    $kode_anggota  = mysqli_real_escape_string($conn, $_POST['kode_anggota']);
-    $nama_lengkap  = mysqli_real_escape_string($conn, $_POST['nama_lengkap']);
-    $jenis_kelamin = $_POST['jenis_kelamin'];
-    $kategori_usia = $_POST['kategori_usia'];
-    $tanggal_daftar= date('Y-m-d');
-    $created_by    = $_SESSION['user'];
-    $tanggal_lahir = date('Y-m-d');
-
-    // Field opsional: kirim NULL jika kosong agar tidak error tipe data di MySQL
-    $tgl_raw       = trim($_POST['tanggal_lahir'] ?? '');
-    $tanggal_lahir = !empty($tgl_raw) ? "'$tgl_raw'" : 'NULL';
-
-    $nik_raw       = mysqli_real_escape_string($conn, trim($_POST['nik'] ?? ''));
-    $nik           = !empty($nik_raw) ? "'$nik_raw'" : 'NULL';
-
+    // --- Validasi Mandatory ---
     $telepon_raw   = mysqli_real_escape_string($conn, trim($_POST['telepon'] ?? ''));
-    $telepon       = !empty($telepon_raw) ? "'$telepon_raw'" : 'NULL';
-
     $alamat_raw    = mysqli_real_escape_string($conn, trim($_POST['alamat'] ?? ''));
-    $alamat        = !empty($alamat_raw) ? "'$alamat_raw'" : 'NULL';
 
-    $q = "INSERT INTO m_anggota (kode_anggota, nama_lengkap, jenis_kelamin, tanggal_lahir, nik, kategori_usia, telepon, alamat, tanggal_daftar, created_by)
-          VALUES ('$kode_anggota','$nama_lengkap','$jenis_kelamin',$tanggal_lahir,$nik,'$kategori_usia',$telepon,$alamat,'$tanggal_daftar','$created_by')";
-
-    if (mysqli_query($conn, $q)) {
-        $_SESSION['sukses_tambah_anggota'] = true;
-        header("Location: daftar.php"); exit;
+    if (empty($nama_lengkap) || empty($telepon_raw) || empty($alamat_raw)) {
+        $error_db = "Nama Lengkap, No. Telepon, dan Alamat Lengkap wajib diisi!";
     } else {
-        $error_db = mysqli_error($conn);
+        $tgl_raw       = trim($_POST['tanggal_lahir'] ?? '');
+        $tanggal_lahir = !empty($tgl_raw) ? "'$tgl_raw'" : 'NULL';
+
+        $umur          = !empty($_POST['umur']) ? (int)$_POST['umur'] : 'NULL';
+
+        $nik_raw       = mysqli_real_escape_string($conn, trim($_POST['nik'] ?? ''));
+        $nik           = !empty($nik_raw) ? "'$nik_raw'" : 'NULL';
+
+        $telepon       = "'$telepon_raw'";
+        $alamat        = "'$alamat_raw'";
+
+        $q = "INSERT INTO m_anggota (kode_anggota, nama_lengkap, jenis_kelamin, tanggal_lahir, umur, nik, kategori_usia, telepon, alamat, tanggal_daftar, created_by)
+              VALUES ('$kode_anggota','$nama_lengkap','$jenis_kelamin',$tanggal_lahir,$umur,$nik,'$kategori_usia',$telepon,$alamat,'$tanggal_daftar','$created_by')";
+
+        if (mysqli_query($conn, $q)) {
+            $_SESSION['sukses_tambah_anggota'] = true;
+            header("Location: daftar.php"); exit;
+        } else {
+            $error_db = mysqli_error($conn);
+        }
     }
 }
 ?>
@@ -122,17 +119,22 @@ if (isset($_POST['simpan'])) {
                     </div>
                 </div>
 
-                <!-- Baris 3: Tanggal Lahir + NIK -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+                <!-- Baris 3: Tanggal Lahir + Umur + NIK -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
                     <div>
                         <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Tanggal Lahir</label>
-                        <input type="date" name="tanggal_lahir" onchange="hitungKategori(this.value)"
+                        <input type="date" name="tanggal_lahir" id="tanggal_lahir" onchange="hitungKategori(this.value)"
                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
-                        <p class="text-[10px] text-slate-400 mt-1 ml-1">Kategori usia akan otomatis terdeteksi</p>
+                        <p class="text-[10px] text-slate-400 mt-1 ml-1">Kategori usia otomatis terdeteksi</p>
                     </div>
                     <div>
-                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">NIK / No. Identitas <span class="text-slate-300 font-normal">(opsional)</span></label>
-                        <input type="text" name="nik" placeholder="16 digit NIK..." maxlength="20"
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Umur <span class="text-slate-300 font-normal">(jika tgl lahir kosong)</span></label>
+                        <input type="number" name="umur" id="umur" placeholder="Umur..."
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">NIK / No. Identitas / KK</label>
+                        <input type="text" name="nik" placeholder="16 digit NIK atau No. KK..." maxlength="20"
                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
                 </div>
@@ -140,13 +142,13 @@ if (isset($_POST['simpan'])) {
                 <!-- Baris 4: Telepon + Alamat -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
                     <div>
-                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">No. Telepon</label>
-                        <input type="text" name="telepon" placeholder="08xxxxxxxxxx"
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">No. Telepon <span class="text-red-500">*</span></label>
+                        <input type="text" name="telepon" id="telepon" placeholder="08xxxxxxxxxx"
                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
                     <div>
-                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Alamat Lengkap</label>
-                        <input type="text" name="alamat" placeholder="Jl. ..., RT/RW, Desa Kurung Kambing"
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Alamat Lengkap <span class="text-red-500">*</span></label>
+                        <input type="text" name="alamat" id="alamat" placeholder="Jl. ..., RT/RW, Desa Kurung Kambing"
                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
                 </div>
@@ -193,6 +195,8 @@ function hitungKategori(tglLahir) {
 document.getElementById('formTambahAnggota').addEventListener('submit', function(e) {
     const fields = [
         { id: 'nama_lengkap', label: 'Nama Lengkap' },
+        { id: 'telepon', label: 'No. Telepon' },
+        { id: 'alamat', label: 'Alamat Lengkap' },
     ];
 
     const kosong = fields.filter(f => {

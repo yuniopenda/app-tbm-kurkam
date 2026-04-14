@@ -39,3 +39,6 @@ if (!$conn) {
 
 // Set zona waktu dari .env, default ke Asia/Jakarta
 date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'Asia/Jakarta');
+
+// Load helper functions
+require_once __DIR__ . '/../includes/functions.php';
