@@ -150,6 +150,14 @@ if ($role !== 'anggota' && isset($conn)) {
                 <span>Tambah Anggota</span>
             </a>
 
+            <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.15em] px-3 mt-4 mb-2">Laporan</p>
+
+            <a href="/app-tbm-kurkam/pages/laporan/peminjaman.php"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm <?= isActive('/laporan/') ?>">
+                <i class="fas fa-chart-line w-4 text-center"></i>
+                <span>Laporan Bulanan</span>
+            </a>
+
         <?php endif; ?>
     </nav>
 

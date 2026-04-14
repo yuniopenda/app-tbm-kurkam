@@ -12,14 +12,16 @@ if (!$row) { echo "<script>alert('Data tidak ditemukan!'); window.location='daft
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama          = mysqli_real_escape_string($conn, $_POST['nama_lengkap']);
     $jenis_kelamin = $_POST['jenis_kelamin'];
-    $tanggal_lahir = $_POST['tanggal_lahir'];
+    $tgl_raw       = $_POST['tanggal_lahir'];
+    $tanggal_lahir = !empty($tgl_raw) ? "'$tgl_raw'" : "NULL";
+    $umur          = !empty($_POST['umur']) ? (int)$_POST['umur'] : "NULL";
     $nik           = mysqli_real_escape_string($conn, $_POST['nik'] ?? '');
     $kategori_usia = $_POST['kategori_usia'];
     $telepon       = mysqli_real_escape_string($conn, $_POST['telepon']);
     $alamat        = mysqli_real_escape_string($conn, $_POST['alamat']);
 
     mysqli_query($conn, "UPDATE m_anggota SET 
-        nama_lengkap='$nama', jenis_kelamin='$jenis_kelamin', tanggal_lahir='$tanggal_lahir',
+        nama_lengkap='$nama', jenis_kelamin='$jenis_kelamin', tanggal_lahir=$tanggal_lahir, umur=$umur,
         nik='$nik', kategori_usia='$kategori_usia', telepon='$telepon', alamat='$alamat',
         updated_by='{$_SESSION['user']}', updated_at=NOW()
         WHERE id='$id'");
@@ -83,27 +85,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </select>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div>
                         <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Tanggal Lahir</label>
-                        <input type="date" name="tanggal_lahir" value="<?= $row['tanggal_lahir'] != '0000-00-00' ? $row['tanggal_lahir'] : '' ?>"
+                        <input type="date" name="tanggal_lahir" id="tanggal_lahir" value="<?= ($row['tanggal_lahir'] && $row['tanggal_lahir'] != '0000-00-00') ? $row['tanggal_lahir'] : '' ?>"
                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
                     <div>
-                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">NIK <span class="text-slate-300 font-normal">(opsional)</span></label>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Umur <span class="text-slate-300 font-normal">(jika tgl lahir kosong)</span></label>
+                        <input type="number" name="umur" id="umur" value="<?= $row['umur'] ?>" placeholder="Umur..."
+                               class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">NIK / Identitas</label>
                         <input type="text" name="nik" value="<?= htmlspecialchars($row['nik'] ?? '') ?>" maxlength="20"
                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">No. Telepon</label>
-                        <input type="text" name="telepon" value="<?= htmlspecialchars($row['telepon']) ?>"
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">No. Telepon <span class="text-red-500">*</span></label>
+                        <input type="text" name="telepon" id="telepon" value="<?= htmlspecialchars($row['telepon']) ?>"
                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
                     <div>
-                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Alamat Lengkap</label>
-                        <input type="text" name="alamat" value="<?= htmlspecialchars($row['alamat'] ?? '') ?>"
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Alamat Lengkap <span class="text-red-500">*</span></label>
+                        <input type="text" name="alamat" id="alamat" value="<?= htmlspecialchars($row['alamat'] ?? '') ?>"
                                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-indigo-200 font-bold text-slate-700">
                     </div>
                 </div>
@@ -120,18 +127,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </main>
 <script>
 function konfirmasi() {
-    // Validasi field wajib sebelum konfirmasi
-    const nama = document.getElementById('nama_lengkap');
-    if (!nama || nama.value.trim() === '') {
-        nama.classList.add('border-red-400');
+    const fields = [
+        { id: 'nama_lengkap', label: 'Nama Lengkap' },
+        { id: 'telepon', label: 'No. Telepon' },
+        { id: 'alamat', label: 'Alamat Lengkap' },
+    ];
+
+    const kosong = fields.filter(f => {
+        const el = document.getElementById(f.id);
+        return !el || el.value.trim() === '';
+    });
+
+    if (kosong.length > 0) {
+        const firstEl = document.getElementById(kosong[0].id);
+        firstEl.classList.add('border-red-400');
+        const listHTML = kosong.map(f => `<li style="text-align:left;"><i class="fas fa-circle-xmark" style="color:#ef4444;margin-right:6px;"></i>${f.label}</li>`).join('');
+
         Swal.fire({
             icon: 'warning',
             title: 'Data Belum Lengkap!',
-            html: '<p style="color:#64748b;">Mohon lengkapi field berikut:</p><ul style="list-style:none;padding:0;"><li style="text-align:left;"><i class="fas fa-circle-xmark" style="color:#ef4444;margin-right:6px;"></i>Nama Lengkap</li></ul>',
+            html: `<p style="color:#64748b;">Mohon lengkapi field berikut:</p><ul style="list-style:none;padding:0;">${listHTML}</ul>`,
             confirmButtonText: 'OK, Saya Lengkapi',
             confirmButtonColor: '#4f46e5',
             customClass: { popup: 'rounded-3xl' }
-        }).then(() => nama.focus());
+        }).then(() => firstEl.focus());
         return;
     }
 
