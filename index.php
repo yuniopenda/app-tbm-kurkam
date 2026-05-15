@@ -8,6 +8,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'anggota') {
     header("Location: pages/user/katalog.php"); exit;
 }
 include(__DIR__ . '/config/koneksi.php');
+include(__DIR__ . '/includes/functions.php');
 
 $today = date('Y-m-d');
 
@@ -83,7 +84,7 @@ while ($row = mysqli_fetch_assoc($top_buku_res)) {
                 <p class="text-slate-500 mt-1 text-sm lg:text-base">Pantau aktivitas perpustakaan dalam satu layar.</p>
             </div>
             <div class="text-right hidden sm:block">
-                <p class="text-sm font-bold text-slate-400"><?= date('l, d F Y'); ?></p>
+                <p class="text-sm font-bold text-slate-400"><?= formatTanggalId(date('Y-m-d'), true) ?></p>
                 <p class="text-indigo-600 font-black text-lg" id="clock"></p>
             </div>
         </div>
@@ -166,9 +167,9 @@ while ($row = mysqli_fetch_assoc($top_buku_res)) {
                         <tr class="hover:bg-slate-50/40 transition <?= $is_overdue ? 'bg-red-50/20' : '' ?>">
                             <td class="px-7 py-4 font-bold text-slate-700"><?= htmlspecialchars($row['nama_lengkap']) ?></td>
                             <td class="px-7 py-4 text-slate-500 italic">"<?= htmlspecialchars($row['judul']) ?>"</td>
-                            <td class="px-7 py-4 text-xs text-slate-500 font-medium"><?= date('d/m/Y', strtotime($row['tgl_pinjam'])) ?></td>
+                            <td class="px-7 py-4 text-xs text-slate-500 font-medium"><?= formatTanggalId($row['tgl_pinjam']) ?></td>
                             <td class="px-7 py-4 text-xs font-bold <?= $is_overdue ? 'text-red-600' : 'text-slate-500' ?>">
-                                <?= date('d/m/Y', strtotime($row['tgl_kembali'])) ?>
+                                <?= formatTanggalId($row['tgl_kembali']) ?>
                                 <?php if($is_overdue): ?>
                                 <span class="ml-1 text-red-400 font-black text-[9px]">⚠ TERLAMBAT</span>
                                 <?php endif; ?>

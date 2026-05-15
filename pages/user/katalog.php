@@ -1,10 +1,10 @@
 <?php
 session_start();
-if (!isset($_SESSION['login'])) { header("Location: /app-tbm-kurkam/login.php"); exit; }
 include(__DIR__ . '/../../config/koneksi.php');
+include(__DIR__ . '/../../includes/functions.php');
 
-// Hanya anggota kalau login sebagai anggota; admin juga bisa akses
-$is_anggota   = (isset($_SESSION['role']) && $_SESSION['role'] === 'anggota');
+$is_logged_in  = isset($_SESSION['login']) && $_SESSION['login'] === true;
+$is_anggota    = $is_logged_in && isset($_SESSION['role']) && $_SESSION['role'] === 'anggota';
 $kategori_usia = $is_anggota ? ($_SESSION['usia_anggota'] ?? 'semua') : '';
 
 // Search & filter
@@ -36,10 +36,10 @@ $data = mysqli_query($conn, "SELECT * FROM m_buku $where ORDER BY judul ASC");
 <body class="bg-slate-100 font-sans flex min-h-screen">
 <?php include(__DIR__ . '/../../includes/sidebar.php'); ?>
 
-<main class="flex-grow ml-64">
+<main class="flex-grow lg:ml-64 pt-16 lg:pt-0">
     <!-- Header -->
-    <div class="bg-indigo-700 text-white px-10 py-10 bg-gradient-to-r from-indigo-700 to-indigo-900">
-        <h1 class="text-4xl font-black mb-1">📚 Katalog Buku</h1>
+    <div class="bg-indigo-700 text-white px-6 lg:px-10 py-8 lg:py-10 bg-gradient-to-r from-indigo-700 to-indigo-900">
+        <h1 class="text-3xl lg:text-4xl font-black mb-1">📚 Katalog Buku</h1>
         <p class="text-indigo-200">TBM Desa Kurung Kambing · Temukan buku yang kamu suka</p>
         <?php if($is_anggota && $kategori_usia && $kategori_usia !== 'semua'): ?>
         <div class="mt-3 inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-sm font-bold">
@@ -62,9 +62,9 @@ $data = mysqli_query($conn, "SELECT * FROM m_buku $where ORDER BY judul ASC");
         </form>
     </div>
 
-    <div class="px-10 py-6">
+    <div class="px-4 lg:px-10 py-6">
         <!-- Filter Pills -->
-        <div class="flex gap-2 mb-6 flex-wrap">
+        <div class="flex gap-2 mb-6 flex-wrap overflow-x-auto pb-1">
             <?php if(!$is_anggota): // admin bisa filter semua usia ?>
             <span class="text-xs text-slate-400 font-black uppercase tracking-widest self-center">Usia:</span>
             <?php foreach([''=>'Semua','dewasa'=>'🧑 Dewasa','remaja'=>'👦 Remaja','anak-anak'=>'👶 Anak-anak'] as $v=>$l): ?>

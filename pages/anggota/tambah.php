@@ -5,23 +5,33 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'anggota') { header("Locat
 include(__DIR__ . '/../../config/koneksi.php');
 
 // --- Generate kode anggota berdasarkan kategori ---
+function generateKodeAnggota($conn, $kategori) {
+    $prefix_map = ['dewasa' => 'D', 'remaja' => 'R', 'anak-anak' => 'A'];
+    $prefix = $prefix_map[$kategori] ?? 'D';
+    $tahun  = date('Y');
+    $like   = "$prefix-$tahun%";
+    $q = mysqli_query($conn, "SELECT MAX(CAST(SUBSTRING(kode_anggota, 7) AS UNSIGNED)) AS n FROM m_anggota WHERE kode_anggota LIKE '$like'");
+    $maxn  = (int)(mysqli_fetch_assoc($q)['n'] ?? 0);
+    return "$prefix-$tahun" . sprintf("%03d", $maxn + 1);
+}
+
 $kategori_default = $_GET['kategori'] ?? 'dewasa';
-$prefix_map = ['dewasa' => 'D', 'remaja' => 'R', 'anak-anak' => 'A'];
-$prefix = $prefix_map[$kategori_default] ?? 'D';
-$tahun  = date('Y');
-$like   = "$prefix-$tahun%";
-$q = mysqli_query($conn, "SELECT MAX(CAST(SUBSTRING(kode_anggota, 8) AS UNSIGNED)) AS n FROM m_anggota WHERE kode_anggota LIKE '$like'");
-$maxn  = (int)(mysqli_fetch_assoc($q)['n'] ?? 0);
-$kodeOtomatis = "$prefix-$tahun" . sprintf("%03d", $maxn + 1);
+$kodeOtomatis = generateKodeAnggota($conn, $kategori_default);
 
 // --- Proses Simpan ---
-    // --- Validasi Mandatory ---
+if (isset($_POST['simpan'])) {
+    $nama_lengkap  = mysqli_real_escape_string($conn, trim($_POST['nama_lengkap'] ?? ''));
+    $jenis_kelamin = in_array($_POST['jenis_kelamin'] ?? '', ['Laki-laki', 'Perempuan']) ? $_POST['jenis_kelamin'] : 'Laki-laki';
+    $kategori_usia = in_array($_POST['kategori_usia'] ?? '', ['dewasa', 'remaja', 'anak-anak']) ? $_POST['kategori_usia'] : 'dewasa';
     $telepon_raw   = mysqli_real_escape_string($conn, trim($_POST['telepon'] ?? ''));
     $alamat_raw    = mysqli_real_escape_string($conn, trim($_POST['alamat'] ?? ''));
 
     if (empty($nama_lengkap) || empty($telepon_raw) || empty($alamat_raw)) {
         $error_db = "Nama Lengkap, No. Telepon, dan Alamat Lengkap wajib diisi!";
     } else {
+        $kode_anggota  = generateKodeAnggota($conn, $kategori_usia);
+        $kodeOtomatis  = $kode_anggota;
+
         $tgl_raw       = trim($_POST['tanggal_lahir'] ?? '');
         $tanggal_lahir = !empty($tgl_raw) ? "'$tgl_raw'" : 'NULL';
 
@@ -32,6 +42,8 @@ $kodeOtomatis = "$prefix-$tahun" . sprintf("%03d", $maxn + 1);
 
         $telepon       = "'$telepon_raw'";
         $alamat        = "'$alamat_raw'";
+        $tanggal_daftar = date('Y-m-d');
+        $created_by    = mysqli_real_escape_string($conn, $_SESSION['user'] ?? 'admin');
 
         $q = "INSERT INTO m_anggota (kode_anggota, nama_lengkap, jenis_kelamin, tanggal_lahir, umur, nik, kategori_usia, telepon, alamat, tanggal_daftar, created_by)
               VALUES ('$kode_anggota','$nama_lengkap','$jenis_kelamin',$tanggal_lahir,$umur,$nik,'$kategori_usia',$telepon,$alamat,'$tanggal_daftar','$created_by')";

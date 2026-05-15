@@ -1,21 +1,24 @@
 <?php
-$current_path = $_SERVER['PHP_SELF'];
-$current_page = basename($current_path);
-$role = $_SESSION['role'] ?? 'admin';
-$user = $_SESSION['user'] ?? 'Pengguna';
+$current_path  = $_SERVER['PHP_SELF'];
+$current_page  = basename($current_path);
+$is_logged_in  = isset($_SESSION['login']) && $_SESSION['login'] === true;
+$role          = $is_logged_in ? ($_SESSION['role'] ?? 'admin') : 'publik';
+$user          = $_SESSION['user'] ?? '';
 
-// Helper: aktif jika path mengandung kata kunci
-function isActive(string $needle): string {
-    $path = $_SERVER['PHP_SELF'];
-    return (strpos($path, $needle) !== false) ? 'bg-white/15 font-bold' : 'hover:bg-white/10 text-indigo-100';
+if (!function_exists('isActive')) {
+    function isActive(string $needle): string {
+        return (strpos($_SERVER['PHP_SELF'], $needle) !== false) ? 'bg-white/15 font-bold' : 'hover:bg-white/10 text-indigo-100';
+    }
 }
-function isExact(string $page): string {
-    return (basename($_SERVER['PHP_SELF']) === $page) ? 'bg-white/15 font-bold' : 'hover:bg-white/10 text-indigo-100';
+if (!function_exists('isExact')) {
+    function isExact(string $page): string {
+        return (basename($_SERVER['PHP_SELF']) === $page) ? 'bg-white/15 font-bold' : 'hover:bg-white/10 text-indigo-100';
+    }
 }
 
-// Badge keterlambatan (hanya untuk admin/petugas)
+// Badge keterlambatan hanya untuk admin/petugas yang sudah login
 $overdue_count = 0;
-if ($role !== 'anggota' && isset($conn)) {
+if ($is_logged_in && $role !== 'anggota' && isset($conn)) {
     $today = date('Y-m-d');
     $r = mysqli_fetch_assoc(mysqli_query($conn,
         "SELECT COUNT(*) AS c FROM t_peminjaman WHERE status='Dipinjam' AND tgl_kembali < '$today'"));
@@ -43,7 +46,7 @@ if ($role !== 'anggota' && isset($conn)) {
                 <i class="fas fa-book-open text-lg text-white"></i>
             </div>
             <div>
-                <h1 class="text-base font-black leading-tight">TBM Kurung Kambing</h1>
+                <h1 class="text-base font-black leading-tight">TBM Desa Kurung Kambing</h1>
                 <p class="text-[10px] text-indigo-300 font-medium leading-tight">literasikurkam.com</p>
             </div>
         </div>
@@ -51,6 +54,7 @@ if ($role !== 'anggota' && isset($conn)) {
 
     <!-- User info -->
     <div class="px-6 py-4 border-b border-white/10">
+        <?php if ($is_logged_in): ?>
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center font-black text-sm">
                 <?= strtoupper(substr($user, 0, 1)) ?>
@@ -60,12 +64,29 @@ if ($role !== 'anggota' && isset($conn)) {
                 <p class="text-[10px] text-indigo-300 font-medium uppercase tracking-wider"><?= $role ?></p>
             </div>
         </div>
+        <?php else: ?>
+        <a href="/app-tbm-kurkam/login.php"
+           class="flex items-center gap-3 px-4 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition text-sm font-bold text-white">
+            <i class="fas fa-sign-in-alt w-4 text-center"></i>
+            <span>Masuk / Login</span>
+        </a>
+        <?php endif; ?>
     </div>
 
     <!-- Navigation -->
     <nav class="flex-grow px-3 py-4 space-y-1 overflow-y-auto">
 
-        <?php if ($role === 'anggota'): ?>
+        <?php if ($role === 'publik'): ?>
+            <!-- ===== MENU PUBLIK (belum login) ===== -->
+            <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.15em] px-3 mb-2">Katalog</p>
+
+            <a href="/app-tbm-kurkam/pages/user/katalog.php"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm <?= isActive('/user/katalog') ?>">
+                <i class="fas fa-book-open w-4 text-center"></i>
+                <span>Daftar Buku</span>
+            </a>
+
+        <?php elseif ($role === 'anggota'): ?>
             <!-- ===== MENU ANGGOTA ===== -->
             <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.15em] px-3 mb-2">Menu</p>
 
@@ -163,12 +184,14 @@ if ($role !== 'anggota' && isset($conn)) {
 
     <!-- Logout -->
     <div class="px-3 py-4 border-t border-white/10">
+        <?php if ($is_logged_in): ?>
         <a href="/app-tbm-kurkam/logout.php"
            onclick="return confirm('Yakin ingin keluar?')"
            class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-300 hover:bg-red-500 hover:text-white text-sm">
             <i class="fas fa-sign-out-alt w-4 text-center"></i>
             <span class="font-bold">Keluar</span>
         </a>
+        <?php endif; ?>
         <p class="text-center text-[9px] text-indigo-500 mt-3 font-medium">
             &copy; <?= date('Y') ?> TBM Desa Kurung Kambing
         </p>

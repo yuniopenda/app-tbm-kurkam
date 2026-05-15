@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="bg-slate-100 font-sans flex min-h-screen">
 <?php include(__DIR__ . '/../../includes/sidebar.php'); ?>
 
-<main class="flex-grow ml-64 p-8 flex items-start justify-center pt-12">
+<main class="flex-grow lg:ml-64 p-4 lg:p-8 pt-16 lg:pt-8 flex items-start justify-center">
     <div class="max-w-3xl w-full">
         <a href="daftar.php" class="inline-flex items-center text-slate-500 font-bold mb-6 hover:text-indigo-600 transition gap-2">
             <i class="fas fa-arrow-left text-sm"></i> Kembali

@@ -21,7 +21,23 @@ function logDeletion($conn, $tableName, $dataId, $deletedBy) {
  * Format currency to IDR
  */
 function formatRupiah($angka) {
-    return "Rp " . number_of_format($angka, 0, ',', '.');
+    return "Rp " . number_format($angka, 0, ',', '.');
+}
+
+/**
+ * Format tanggal ke bahasa Indonesia, misal: 15 Mei 2026
+ */
+function formatTanggalId($tgl, $withDay = false) {
+    if (!$tgl || $tgl === '0000-00-00') return '-';
+    $bulan = ['','Januari','Februari','Maret','April','Mei','Juni',
+              'Juli','Agustus','September','Oktober','November','Desember'];
+    $ts = strtotime($tgl);
+    $d  = date('j', $ts);
+    $m  = (int)date('n', $ts);
+    $y  = date('Y', $ts);
+    $hariNama = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    $prefix = $withDay ? $hariNama[date('w', $ts)] . ', ' : '';
+    return "$prefix$d {$bulan[$m]} $y";
 }
 
 /**

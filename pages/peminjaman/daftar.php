@@ -3,6 +3,7 @@ session_start();
 if (!isset($_SESSION['login'])) { header("Location: /app-tbm-kurkam/login.php"); exit; }
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'anggota') { header("Location: /app-tbm-kurkam/pages/user/katalog.php"); exit; }
 include(__DIR__ . '/../../config/koneksi.php');
+include(__DIR__ . '/../../includes/functions.php');
 
 // Search
 $keyword = isset($_POST['cari']) ? $_POST['keyword'] : ($_SESSION['keyword_pinjam'] ?? '');
@@ -107,10 +108,10 @@ $data = mysqli_query($conn,
                         <div class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded w-fit mb-1"><?= $row['kode_buku'] ?></div>
                         <div class="font-bold text-slate-700 text-sm"><?= htmlspecialchars($row['judul']) ?></div>
                     </td>
-                    <td class="px-5 py-4 text-sm text-slate-500 font-medium"><?= date('d/m/Y', strtotime($row['tgl_pinjam'])) ?></td>
+                    <td class="px-5 py-4 text-sm text-slate-500 font-medium"><?= formatTanggalId($row['tgl_pinjam']) ?></td>
                     <td class="px-5 py-4">
                         <div class="text-sm font-bold <?= $is_overdue ? 'text-red-600' : ($is_due_soon ? 'text-amber-600' : 'text-slate-700') ?>">
-                            <?= date('d/m/Y', strtotime($row['tgl_kembali'])) ?>
+                            <?= formatTanggalId($row['tgl_kembali']) ?>
                         </div>
                         <?php if($is_overdue): ?>
                             <div class="text-[10px] text-red-500 font-black">⚠ Terlambat <?= $telat_hari ?> hari</div>

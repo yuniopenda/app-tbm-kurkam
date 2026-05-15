@@ -6,6 +6,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'anggota') {
     header("Location: /app-tbm-kurkam/index.php"); exit;
 }
 include(__DIR__ . '/../../config/koneksi.php');
+include(__DIR__ . '/../../includes/functions.php');
 
 $id_anggota = (int)$_SESSION['id_anggota'];
 $data = mysqli_query($conn,
@@ -26,9 +27,9 @@ $anggota = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM m_anggota WHERE
 <body class="bg-slate-100 font-sans flex min-h-screen">
 <?php include(__DIR__ . '/../../includes/sidebar.php'); ?>
 
-<main class="flex-grow ml-64 p-8">
+<main class="flex-grow lg:ml-64 p-4 lg:p-8 pt-16 lg:pt-8">
     <!-- Profil card anggota -->
-    <div class="bg-indigo-700 rounded-[2.5rem] p-8 text-white mb-8 flex items-center gap-8 shadow-2xl shadow-indigo-200 bg-gradient-to-r from-indigo-700 to-indigo-900">
+    <div class="bg-indigo-700 rounded-[2.5rem] p-5 lg:p-8 text-white mb-6 lg:mb-8 flex items-center gap-4 lg:gap-8 shadow-2xl shadow-indigo-200 bg-gradient-to-r from-indigo-700 to-indigo-900">
         <div class="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-4xl font-black">
             <?= strtoupper(substr($anggota['nama_lengkap'] ?? 'A', 0, 1)) ?>
         </div>
@@ -78,10 +79,10 @@ $anggota = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM m_anggota WHERE
                             <span class="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-black">📖 Fisik</span>
                         <?php endif; ?>
                     </td>
-                    <td class="px-6 py-4 text-sm text-slate-500 font-medium"><?= date('d/m/Y', strtotime($row['tgl_pinjam'])) ?></td>
+                    <td class="px-6 py-4 text-sm text-slate-500 font-medium"><?= formatTanggalId($row['tgl_pinjam']) ?></td>
                     <td class="px-6 py-4">
                         <div class="text-sm font-bold <?= $is_ov ? 'text-red-600' : '' ?>">
-                            <?= date('d/m/Y', strtotime($row['tgl_kembali'])) ?>
+                            <?= formatTanggalId($row['tgl_kembali']) ?>
                         </div>
                         <?php if($is_ov): ?>
                             <div class="text-[10px] text-red-500 font-black">⚠ Terlambat <?= $telat ?> hari</div>
